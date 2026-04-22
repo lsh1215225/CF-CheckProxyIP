@@ -25,8 +25,7 @@ export default {
 					}
 				});
 			}
-		}
-
+		} else if (url.pathname === '/locations') return fetch(new Request('https://speed.cloudflare.com/locations', { headers: { 'Referer': 'https://speed.cloudflare.com/' } }));
 		return new Response(generateHTML(), {
 			headers: { 'Content-Type': 'text/html; charset=UTF-8' }
 		});
