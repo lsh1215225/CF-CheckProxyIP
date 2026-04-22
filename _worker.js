@@ -1043,6 +1043,12 @@ function generateHTML() {
 			background: linear-gradient(135deg, rgba(52, 211, 153, 0.18), rgba(97, 219, 255, 0.12));
 		}
 
+		.exit-ip-btn.is-active {
+			border-color: rgba(97, 219, 255, 0.52);
+			background: linear-gradient(135deg, rgba(97, 219, 255, 0.26), rgba(52, 211, 153, 0.16));
+			box-shadow: inset 0 0 0 1px rgba(97, 219, 255, 0.14), 0 0 0 1px rgba(97, 219, 255, 0.1);
+		}
+
 		.map-container-wrapper {
 			display: none;
 			margin-top: 16px;
@@ -1801,6 +1807,15 @@ function generateHTML() {
 			itemObj.flag.style.backgroundImage = '';
 		}
 
+		function getExitSelectionKey(exitData, fallbackIp) {
+			return [
+				String(exitData?.ip || fallbackIp || '').trim(),
+				String(exitData?.ipType || '').trim().toLowerCase(),
+				normalizeColoCode(exitData?.colo),
+				String(exitData?.loc || '').trim()
+			].join('|');
+		}
+
 		function renderExitList(container, exitIps) {
 			container.innerHTML = '';
 
@@ -1822,6 +1837,7 @@ function generateHTML() {
 				button.type = 'button';
 				button.className = 'exit-ip-btn';
 				button.innerText = entry.ip;
+				button.dataset.exitKey = getExitSelectionKey(entry.exitData, entry.ip);
 				button.addEventListener('click', function () {
 					showDetails(button, entry.exitData);
 				});
@@ -1946,16 +1962,28 @@ function generateHTML() {
 			const item = button.closest('.result-item');
 			const container = item.querySelector('.map-container-wrapper');
 			const isOpen = container.style.display === 'block';
+			const nextSelectionKey = button.dataset.exitKey || getExitSelectionKey(exitData);
+			const isSameSelection = isOpen && container.dataset.activeExitKey === nextSelectionKey;
 			const currentToken = ++mapRenderToken;
 
 			document.querySelectorAll('.map-container-wrapper').forEach(function (panel) {
-				panel.style.display = 'none';
+				if (panel !== container) {
+					panel.style.display = 'none';
+					panel.dataset.activeExitKey = '';
+				}
+			});
+			document.querySelectorAll('.exit-ip-btn.is-active').forEach(function (activeButton) {
+				activeButton.classList.remove('is-active');
 			});
 
-			if (isOpen) {
+			if (isSameSelection) {
+				container.style.display = 'none';
+				container.dataset.activeExitKey = '';
 				return;
 			}
 
+			container.dataset.activeExitKey = nextSelectionKey;
+			button.classList.add('is-active');
 			initMap();
 			container.appendChild(globalMap);
 			container.style.display = 'block';
