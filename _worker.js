@@ -1727,7 +1727,7 @@ function generateHTML() {
 						'<span class="meta-chip meta-chip-strong">' + escapeHtml(latency) + '</span>',
 						'<span class="meta-chip">' + escapeHtml(locations) + '</span>',
 						'<span class="meta-chip">' + escapeHtml(networks) + '</span>',
-						'<span class="meta-chip">' + escapeHtml((data.colo ? 'CF ' + data.colo + ' · ' : '') + exitIps.length + ' 个出口') + '</span>'
+						'<span class="meta-chip">' + escapeHtml(exitIps.length + '个出口') + '</span>'
 					];
 					itemObj.meta.innerHTML = metaParts.join('');
 
