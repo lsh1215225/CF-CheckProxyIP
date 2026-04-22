@@ -249,6 +249,10 @@ function generateHTML(hostname) {
 			--border-radius: 12px;
 		}
 
+		* {
+			box-sizing: border-box;
+		}
+
 		body {
 			background-color: var(--bg-color);
 			color: var(--text-color);
@@ -256,12 +260,15 @@ function generateHTML(hostname) {
 			margin: 0;
 			display: flex;
 			flex-direction: column;
+			align-items: center;
 			min-height: 100vh;
+			overflow-x: hidden;
 		}
 
 		header {
 			padding: 2rem;
 			text-align: center;
+			width: 100%;
 			background: linear-gradient(to bottom, rgba(30, 41, 59, 0.5), transparent);
 		}
 
@@ -275,20 +282,12 @@ function generateHTML(hostname) {
 		}
 
 		main {
-			flex: 1;
-			max-width: 1200px;
-			margin: 0 auto;
 			width: 100%;
+			max-width: 800px;
 			padding: 0 1rem 2rem;
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			gap: 2rem;
-		}
-
-		@media (max-width: 900px) {
-			main {
-				grid-template-columns: 1fr;
-			}
+			display: flex;
+			flex-direction: column;
+			gap: 1.5rem;
 		}
 
 		.glass-card {
@@ -300,18 +299,16 @@ function generateHTML(hostname) {
 			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 		}
 
-		textarea {
+		input[type="text"] {
 			width: 100%;
-			height: 200px;
+			padding: 0.75rem;
 			background: rgba(15, 23, 42, 0.5);
 			border: 1px solid rgba(255, 255, 255, 0.1);
 			border-radius: 8px;
 			color: white;
-			padding: 1rem;
-			font-family: monospace;
-			resize: vertical;
-			box-sizing: border-box;
 			margin-bottom: 1rem;
+			box-sizing: border-box;
+			font-family: inherit;
 		}
 
 		button {
@@ -331,18 +328,37 @@ function generateHTML(hostname) {
 			opacity: 0.9;
 		}
 
-		button:active {
-			transform: translateY(0);
+		.progress-container {
+			display: none;
+			width: 100%;
+			background: rgba(255, 255, 255, 0.05);
+			border-radius: 50px;
+			height: 24px;
+			overflow: hidden;
+			position: relative;
+			margin-top: 0.5rem;
 		}
 
-		#map {
-			height: 400px;
-			border-radius: var(--border-radius);
-			z-index: 1;
+		.progress-bar {
+			width: 0%;
+			height: 100%;
+			background: linear-gradient(to right, #34d399, #10b981);
+			transition: width 0.3s ease;
+		}
+
+		.progress-text {
+			position: absolute;
+			width: 100%;
+			text-align: center;
+			top: 0; left: 0;
+			font-size: 0.8rem;
+			line-height: 24px;
+			font-weight: 700;
+			color: white;
+			text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 		}
 
 		.results-list {
-			margin-top: 1rem;
 			display: flex;
 			flex-direction: column;
 			gap: 0.75rem;
@@ -350,37 +366,26 @@ function generateHTML(hostname) {
 
 		.result-item {
 			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			padding: 0.75rem 1rem;
+			flex-direction: column;
+			padding: 1rem;
 			border-radius: 8px;
 			background: rgba(255, 255, 255, 0.05);
 			border-left: 4px solid #475569;
 			transition: background 0.3s;
 		}
 
-		.result-item.success {
-			border-left-color: var(--success-color);
-		}
+		.result-item.success { border-left-color: var(--success-color); }
+		.result-item.error { border-left-color: var(--error-color); }
 
-		.result-item.error {
-			border-left-color: var(--error-color);
-		}
-
-		.result-info {
+		.result-header {
 			display: flex;
-			flex-direction: column;
+			justify-content: space-between;
+			align-items: center;
 		}
 
-		.result-ip {
-			font-weight: 700;
-			font-family: monospace;
-		}
-
-		.result-detail {
-			font-size: 0.8rem;
-			color: #94a3b8;
-		}
+		.result-info { display: flex; flex-direction: column; }
+		.result-ip { font-weight: 700; font-family: monospace; }
+		.result-detail { font-size: 0.8rem; color: #94a3b8; }
 
 		.status-badge {
 			padding: 0.25rem 0.5rem;
@@ -389,7 +394,6 @@ function generateHTML(hostname) {
 			font-weight: 700;
 			text-transform: uppercase;
 		}
-
 		.status-success { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
 		.status-error { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 		.status-pending { background: rgba(234, 179, 8, 0.2); color: #facc15; }
@@ -398,35 +402,22 @@ function generateHTML(hostname) {
 			cursor: pointer;
 			text-decoration: underline;
 			color: var(--primary-color);
+			margin-right: 0.5rem;
 		}
 
-		.exit-ip-btn:hover {
-			color: #7dd3fc;
-		}
-
-		.loading-overlay {
+		.map-container-wrapper {
 			display: none;
-			position: fixed;
-			top: 0; left: 0; right: 0; bottom: 0;
-			background: rgba(15, 23, 42, 0.8);
-			z-index: 1000;
-			justify-content: center;
-			align-items: center;
-			flex-direction: column;
+			margin-top: 1rem;
+			height: 350px;
+			border-radius: 8px;
+			overflow: hidden;
+			border: 1px solid rgba(255, 255, 255, 0.1);
 		}
 
-		.spinner {
-			width: 50px;
-			height: 50px;
-			border: 5px solid rgba(56, 189, 248, 0.3);
-			border-top-color: var(--primary-color);
-			border-radius: 50%;
-			animation: spin 1s linear infinite;
-		}
+		#map-template { display: none; }
+		#global-map { height: 100%; width: 100%; }
 
-		@keyframes spin {
-			to { transform: rotate(360deg); }
-		}
+		.leaflet-control-attribution, .leaflet-control-zoom { display: none !important; }
 	</style>
 </head>
 <body>
@@ -437,26 +428,20 @@ function generateHTML(hostname) {
 
 	<main>
 		<div class="glass-card">
-			<input type="text" id="inputList" placeholder="请输入 IP 或域名 (例如: 8.223.63.150 或 PROXYIP.tp1.090227.xyz)" style="width: 100%; padding: 0.75rem; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white; margin-bottom: 1rem; box-sizing: border-box;">
+			<input type="text" id="inputList" placeholder="请输入 IP 或域名 (例如: ProxyIP.CMLiussss.net)">
 			<button id="checkBtn">开始检测</button>
-			
-			<div id="results" class="results-list">
-				<!-- Results will appear here -->
+			<div id="progressContainer" class="progress-container">
+				<div id="progressBar" class="progress-bar"></div>
+				<div id="progressText" class="progress-text">0%</div>
 			</div>
 		</div>
 
-		<div class="glass-card" style="display: flex; flex-direction: column; gap: 1rem;">
-			<div id="map"></div>
-			<div id="details" class="glass-card" style="background: rgba(15, 23, 42, 0.3); flex: 1; overflow-y: auto;">
-				<h3 style="margin-top: 0;">落地详细参数</h3>
-				<div id="detailContent">点击检测成功的出口 IP 查看详情...</div>
-			</div>
-		</div>
+		<div id="results" class="results-list"></div>
 	</main>
 
-	<div id="loading" class="loading-overlay">
-		<div class="spinner"></div>
-		<p style="margin-top: 1rem; font-weight: 600;">正在解析与探测...</p>
+	<!-- Global Hidden Map Element -->
+	<div id="map-template">
+		<div id="global-map"></div>
 	</div>
 
 	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -464,127 +449,188 @@ function generateHTML(hostname) {
 		const checkBtn = document.getElementById('checkBtn');
 		const inputList = document.getElementById('inputList');
 		const resultsDiv = document.getElementById('results');
-		const loading = document.getElementById('loading');
-		const detailContent = document.getElementById('detailContent');
+		const progressContainer = document.getElementById('progressContainer');
+		const progressBar = document.getElementById('progressBar');
+		const progressText = document.getElementById('progressText');
+		const globalMap = document.getElementById('global-map');
 
-		let map = L.map('map').setView([20, 0], 2);
-		L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-			attribution: '&copy; OpenStreetMap &copy; CARTO'
-		}).addTo(map);
-
+		let map = null;
 		let markers = [];
+		let totalTargets = 0;
+		let completedCount = 0;
+		let successCount = 0;
+
+		function initMap() {
+			if (map) return;
+			map = L.map('global-map', {
+				zoomControl: false,
+				attributionControl: false
+			}).setView([20, 0], 2);
+			L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+		}
 
 		checkBtn.addEventListener('click', async () => {
 			const line = inputList.value.trim();
 			if (!line) return;
 
 			resultsDiv.innerHTML = '';
-			detailContent.innerHTML = '点击检测成功的出口 IP 查看详情...';
-			loading.style.display = 'flex';
+			progressContainer.style.display = 'block';
+			progressBar.style.width = '0%';
+			progressText.innerText = '正在解析...';
+			completedCount = 0;
 			
-			// Clear markers
-			markers.forEach(m => map.removeLayer(m));
-			markers = [];
-
 			try {
 				const res = await fetch(\`/resolve?proxyip=\${encodeURIComponent(line)}\`);
 				const targets = await res.json();
+				
 				if (Array.isArray(targets)) {
+					totalTargets = targets.length;
+					completedCount = 0;
+					successCount = 0;
+					updateProgress();
+					
 					const checkPromises = targets.map(target => checkIP(target));
 					await Promise.all(checkPromises);
+					const failCount = totalTargets - successCount;
+					progressText.innerText = \`总计: \${totalTargets} | 有效: \${successCount} | 失败: \${failCount}\`;
 				} else {
-					addResultItem(line, null, '解析失败', 'error');
+					progressText.innerText = '解析失败';
 				}
 			} catch (e) {
-				console.error('Global error', e);
-				addResultItem(line, null, '系统错误', 'error');
-			} finally {
-				loading.style.display = 'none';
+				console.error(e);
+				progressText.innerText = '系统错误';
 			}
 		});
 
+		function updateProgress() {
+			const percent = totalTargets > 0 ? Math.round((completedCount / totalTargets) * 100) : 0;
+			progressBar.style.width = \`\${percent}%\`;
+			progressText.innerText = \`\${completedCount} / \${totalTargets}\`;
+		}
+
 		async function checkIP(target) {
-			const item = addResultItem(target, null, '检测中...', 'pending');
+			const itemObj = addResultItem(target);
 			try {
 				const res = await fetch(\`https://api.090227.xyz/check?proxyip=\${encodeURIComponent(target)}\`);
 				const data = await res.json();
 				
-				if (data.success) {
-					item.className = 'result-item success';
-					const exitIps = [];
-					if (data.probe_results?.ipv4?.ok) exitIps.push({ ip: data.probe_results.ipv4.exit.ip, type: 'IPv4', exitData: data.probe_results.ipv4.exit });
-					if (data.probe_results?.ipv6?.ok) exitIps.push({ ip: data.probe_results.ipv6.exit.ip, type: 'IPv6', exitData: data.probe_results.ipv6.exit });
+				completedCount++;
+				updateProgress();
 
-					let exitHtml = '';
-					exitIps.forEach(ex => {
-						exitHtml += \` <span class="exit-ip-btn" onclick="showDetails('\${ex.ip}', \${JSON.stringify(ex.exitData).replace(/"/g, '&quot;')})">\${ex.ip}</span>\`;
-					});
+				if (data.success) {
+					successCount++;
+					itemObj.el.className = 'result-item success';
+					const exitIps = [];
+					if (data.probe_results?.ipv4?.ok) exitIps.push({ ip: data.probe_results.ipv4.exit.ip, exitData: data.probe_results.ipv4.exit });
+					if (data.probe_results?.ipv6?.ok) exitIps.push({ ip: data.probe_results.ipv6.exit.ip, exitData: data.probe_results.ipv6.exit });
 
 					const countries = [...new Set(exitIps.map(ex => ex.exitData.country))].join('/');
+					
+					let exitHtml = '';
+					exitIps.forEach(ex => {
+						const exitDataStr = JSON.stringify(ex.exitData).replace(/"/g, '&quot;');
+						exitHtml += \`<span class="exit-ip-btn" onclick="showDetails(this, '\${ex.ip}', \${exitDataStr})">\${ex.ip}</span>\`;
+					});
 
-					item.innerHTML = \`
-						<div class="result-info">
-							<span class="result-ip">\${data.candidate}</span>
-							<span class="result-detail">出口: \${exitHtml || '未知'} | 地区: \${countries || '未知'} | 延迟: \${data.responseTime}ms</span>
-						</div>
-						<span class="status-badge status-success">可用</span>
+					itemObj.info.innerHTML = \`
+						<span class="result-ip">\${data.candidate}</span>
+						<span class="result-detail">出口: \${exitHtml || '未知'} | 地区: \${countries || '未知'} | 延迟: \${data.responseTime}ms</span>
 					\`;
+					itemObj.badge.className = 'status-badge status-success';
+					itemObj.badge.innerText = '可用';
 				} else {
-					item.className = 'result-item error';
-					item.innerHTML = \`
-						<div class="result-info">
-							<span class="result-ip">\${target}</span>
-							<span class="result-detail">无法通过此代理访问 Cloudflare</span>
-						</div>
-						<span class="status-badge status-error">不可用</span>
+					itemObj.el.className = 'result-item error';
+					itemObj.badge.className = 'status-badge status-error';
+					itemObj.badge.innerText = '不可用';
+					itemObj.info.innerHTML = \`
+						<span class="result-ip">\${target}</span>
+						<span class="result-detail">无法通过此代理访问 Cloudflare</span>
 					\`;
 				}
 			} catch (e) {
-				item.className = 'result-item error';
-				item.innerHTML = \`
-					<div class="result-info">
-						<span class="result-ip">\${target}</span>
-						<span class="result-detail">检测接口请求失败</span>
-					</div>
-					<span class="status-badge status-error">失败</span>
-				\`;
+				completedCount++;
+				updateProgress();
+				itemObj.el.className = 'result-item error';
+				itemObj.badge.innerText = '失败';
 			}
 		}
 
-		function addResultItem(ip, details, status, type) {
+		function addResultItem(ip) {
 			const div = document.createElement('div');
-			div.className = \`result-item \${type}\`;
+			div.className = 'result-item';
 			div.innerHTML = \`
-				<div class="result-info">
-					<span class="result-ip">\${ip}</span>
-					<span class="result-detail">\${details || status}</span>
+				<div class="result-header">
+					<div class="result-info">
+						<span class="result-ip">\${ip}</span>
+						<span class="result-detail">正在检测...</span>
+					</div>
+					<span class="status-badge status-pending">等待</span>
 				</div>
-				<span class="status-badge status-\${type}">\${status}</span>
+				<div class="map-container-wrapper"></div>
 			\`;
 			resultsDiv.appendChild(div);
-			return div;
+			return {
+				el: div,
+				info: div.querySelector('.result-info'),
+				badge: div.querySelector('.status-badge'),
+				mapContainer: div.querySelector('.map-container-wrapper')
+			};
 		}
 
-		window.showDetails = (ip, exitData) => {
-			const loc = exitData.loc.split(',').map(Number);
-			map.setView(loc, 6);
+		window.showDetails = (btn, ip, exitData) => {
+			const item = btn.closest('.result-item');
+			const container = item.querySelector('.map-container-wrapper');
 			
-			const marker = L.marker(loc).addTo(map)
-				.bindPopup(\`<b>落地 IP: \${ip}</b><br>\${exitData.city}, \${exitData.country}<br>\${exitData.asOrganization}\`)
-				.openPopup();
-			markers.push(marker);
+			// If clicking the same IP and map is already there, do nothing or toggle? Let's just show.
+			const isAlreadyShowing = container.style.display === 'block' && container.contains(globalMap);
 
-			detailContent.innerHTML = \`
-				<div style="display: grid; grid-template-columns: 100px 1fr; gap: 0.5rem; font-size: 0.9rem;">
-					<b style="color: var(--primary-color);">IP:</b> <span>\${ip}</span>
-					<b>国家:</b> <span>\${exitData.country}</span>
-					<b>城市:</b> <span>\${exitData.city}</span>
-					<b>ASN:</b> <span>AS\${exitData.asn}</span>
-					<b>运营商:</b> <span>\${exitData.asOrganization}</span>
-					<b>时间:</b> <span>\${exitData.time}</span>
-					<b>经纬度:</b> <span>\${exitData.loc}</span>
-				</div>
-			\`;
+			// Hide all map containers
+			document.querySelectorAll('.map-container-wrapper').forEach(c => c.style.display = 'none');
+			
+			initMap();
+			
+			// Move map to this container
+			container.appendChild(globalMap);
+			container.style.display = 'block';
+
+			// 使用 setTimeout 确保 DOM 渲染完成后再重算地图尺寸和中心
+			setTimeout(() => {
+				map.invalidateSize();
+				const loc = exitData.loc.split(',').map(Number);
+				map.setView(loc, 6);
+
+				// Clear markers
+				markers.forEach(m => map.removeLayer(m));
+				markers = [];
+
+				const popupContent = \`
+					<div style="font-family: inherit; font-size: 0.85rem; line-height: 1.4;">
+						<b>落地IP:</b> \${ip}<br>
+						<b>国家:</b> \${exitData.country}<br>
+						<b>城市:</b> \${exitData.city}<br>
+						<b>ASN:</b> AS\${exitData.asn}<br>
+						<b>运营商:</b> \${exitData.asOrganization}
+					</div>
+				\`;
+
+				const marker = L.marker(loc).addTo(map)
+					.bindPopup(popupContent)
+					.openPopup();
+				markers.push(marker);
+			}, 100);
+		};
+
+		// 自动执行路径中的参数
+		window.onload = () => {
+			const path = window.location.pathname.slice(1);
+			if (path && path.length > 3) {
+				const decodedPath = decodeURIComponent(path);
+				if (decodedPath !== 'resolve' && decodedPath !== 'favicon.ico') {
+					inputList.value = decodedPath;
+					window.history.replaceState({}, '', '/');
+					checkBtn.click();
+				}
+			}
 		};
 	</script>
 </body>
