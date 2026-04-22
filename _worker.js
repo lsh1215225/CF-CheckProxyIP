@@ -1313,7 +1313,11 @@ function generateHTML() {
 		const emptyStateDescription = document.getElementById('emptyStateDescription');
 
 		let map = null;
-		let markers = [];
+		let mapLayers = [];
+		let mapSvgRenderer = null;
+		let cfLocationIndex = new Map();
+		let cfLocationsPromise = null;
+		let mapRenderToken = 0;
 		let totalTargets = 0;
 		let completedCount = 0;
 		let successCount = 0;
@@ -1327,6 +1331,179 @@ function generateHTML() {
 				attributionControl: false
 			}).setView([20, 0], 2);
 			L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+			mapSvgRenderer = L.svg();
+			mapSvgRenderer.addTo(map);
+		}
+
+		function normalizeColoCode(value) {
+			const code = String(value || '').trim().toUpperCase();
+			return /^[A-Z0-9]{3,4}$/.test(code) ? code : '';
+		}
+
+		function isValidCoordinatePair(value) {
+			return Array.isArray(value)
+				&& value.length === 2
+				&& value.every(function (entry) { return Number.isFinite(entry); })
+				&& Math.abs(value[0]) <= 90
+				&& Math.abs(value[1]) <= 180;
+		}
+
+		function parseCoordinatePair(value) {
+			if (typeof value === 'string') {
+				const parts = value.split(',').map(function (entry) {
+					return Number(entry.trim());
+				});
+				return isValidCoordinatePair(parts) ? parts : null;
+			}
+
+			if (Array.isArray(value)) {
+				const parts = value.map(function (entry) {
+					return Number(entry);
+				});
+				return isValidCoordinatePair(parts) ? parts : null;
+			}
+
+			return null;
+		}
+
+		async function loadCfLocations() {
+			if (cfLocationsPromise) {
+				return cfLocationsPromise;
+			}
+
+			cfLocationsPromise = fetch('/locations')
+				.then(function (response) {
+					if (!response.ok) {
+						throw new Error('Failed to load /locations: ' + response.status);
+					}
+					return response.json();
+				})
+				.then(function (payload) {
+					const nextIndex = new Map();
+					if (Array.isArray(payload)) {
+						payload.forEach(function (entry) {
+							const code = normalizeColoCode(entry?.iata);
+							const lat = Number(entry?.lat);
+							const lon = Number(entry?.lon);
+							if (!code || !Number.isFinite(lat) || !Number.isFinite(lon)) {
+								return;
+							}
+							nextIndex.set(code, {
+								code: code,
+								lat: lat,
+								lon: lon,
+								city: String(entry?.city || '').trim(),
+								region: String(entry?.region || '').trim(),
+								country: String(entry?.cca2 || '').trim()
+							});
+						});
+					}
+					cfLocationIndex = nextIndex;
+					return nextIndex;
+				})
+				.catch(function (error) {
+					console.error('Failed to preload Cloudflare locations', error);
+					return cfLocationIndex;
+				});
+
+			return cfLocationsPromise;
+		}
+
+		function getCfLocation(coloCode) {
+			const normalizedCode = normalizeColoCode(coloCode);
+			if (!normalizedCode) {
+				return null;
+			}
+
+			const location = cfLocationIndex.get(normalizedCode);
+			return location ? {
+				code: location.code,
+				lat: location.lat,
+				lon: location.lon,
+				city: location.city,
+				region: location.region,
+				country: location.country
+			} : null;
+		}
+
+		function clearMapLayers() {
+			mapLayers.forEach(function (layer) {
+				map.removeLayer(layer);
+			});
+			mapLayers = [];
+		}
+
+		function buildCfLocationLabel(cfLocation) {
+			return [cfLocation?.city, cfLocation?.region, cfLocation?.country].filter(Boolean).join(', ');
+		}
+
+		function ensureRouteArrowMarkerDef() {
+			const overlaySvg = map?.getPanes?.().overlayPane?.querySelector('svg');
+			if (!overlaySvg) {
+				return '';
+			}
+
+			const svgNamespace = 'http://www.w3.org/2000/svg';
+			let defs = overlaySvg.querySelector('defs');
+			if (!defs) {
+				defs = document.createElementNS(svgNamespace, 'defs');
+				overlaySvg.insertBefore(defs, overlaySvg.firstChild);
+			}
+
+			const markerId = 'route-flow-arrowhead';
+			if (!overlaySvg.querySelector('#' + markerId)) {
+				const marker = document.createElementNS(svgNamespace, 'marker');
+				marker.setAttribute('id', markerId);
+				marker.setAttribute('viewBox', '0 0 10 10');
+				marker.setAttribute('refX', '8');
+				marker.setAttribute('refY', '5');
+				marker.setAttribute('markerWidth', '7');
+				marker.setAttribute('markerHeight', '7');
+				marker.setAttribute('orient', 'auto');
+				marker.setAttribute('markerUnits', 'strokeWidth');
+
+				const arrowPath = document.createElementNS(svgNamespace, 'path');
+				arrowPath.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+				arrowPath.setAttribute('fill', '#8be9ff');
+				arrowPath.setAttribute('fill-opacity', '0.95');
+
+				marker.appendChild(arrowPath);
+				defs.appendChild(marker);
+			}
+
+			return markerId;
+		}
+
+		function applyArrowStyleToPolyline(polyline) {
+			const markerId = ensureRouteArrowMarkerDef();
+			const pathElement = polyline?.getElement?.();
+			if (!markerId || !pathElement) {
+				return;
+			}
+
+			pathElement.setAttribute('marker-end', 'url(#' + markerId + ')');
+			pathElement.setAttribute('stroke-linecap', 'round');
+		}
+
+		function createExitPopup(exitData) {
+			const locationText = formatExitLocation(exitData) || 'Location unknown';
+			const networkText = formatExitNetwork(exitData) || 'Network unknown';
+			const coloCode = normalizeColoCode(exitData?.colo);
+			const coloText = coloCode ? '<br>CF Colo: ' + escapeHtml(coloCode) : '';
+			return '<div class="map-popup"><b>Exit IP</b><br>'
+				+ escapeHtml(exitData?.ip || 'Unknown')
+				+ '<br>' + escapeHtml(locationText)
+				+ '<br>' + escapeHtml(networkText)
+				+ coloText
+				+ '</div>';
+		}
+
+		function createCfPopup(cfLocation) {
+			const locationText = buildCfLocationLabel(cfLocation) || 'Location unknown';
+			return '<div class="map-popup"><b>Cloudflare Colo</b><br>'
+				+ escapeHtml(cfLocation?.code || 'Unknown')
+				+ '<br>' + escapeHtml(locationText)
+				+ '</div>';
 		}
 
 		function escapeHtml(value) {
@@ -1765,10 +1942,11 @@ function generateHTML() {
 			updateProgress();
 		}
 
-		function showDetails(button, exitData) {
+		async function showDetails(button, exitData) {
 			const item = button.closest('.result-item');
 			const container = item.querySelector('.map-container-wrapper');
 			const isOpen = container.style.display === 'block';
+			const currentToken = ++mapRenderToken;
 
 			document.querySelectorAll('.map-container-wrapper').forEach(function (panel) {
 				panel.style.display = 'none';
@@ -1782,24 +1960,78 @@ function generateHTML() {
 			container.appendChild(globalMap);
 			container.style.display = 'block';
 
-			setTimeout(function () {
+			setTimeout(async function () {
+				if (currentToken !== mapRenderToken || container.style.display !== 'block') {
+					return;
+				}
+
 				map.invalidateSize();
 
-				const rawLoc = typeof exitData.loc === 'string' ? exitData.loc.split(',').map(Number) : [20, 0];
-				const hasValidLocation = rawLoc.length === 2 && rawLoc.every(function (value) {
-					return Number.isFinite(value);
-				});
-				const loc = hasValidLocation ? rawLoc : [20, 0];
-				map.setView(loc, hasValidLocation ? 6 : 2);
+				const exitLocation = parseCoordinatePair(exitData?.loc);
+				await loadCfLocations();
+				if (currentToken !== mapRenderToken || container.style.display !== 'block') {
+					return;
+				}
 
-				markers.forEach(function (marker) {
-					map.removeLayer(marker);
-				});
-				markers = [];
+				const cfLocation = getCfLocation(exitData?.colo);
+				const cfCoordinates = cfLocation ? [cfLocation.lat, cfLocation.lon] : null;
+				const hasExitLocation = isValidCoordinatePair(exitLocation);
+				const hasCfLocation = isValidCoordinatePair(cfCoordinates);
 
-				const marker = L.marker(loc).addTo(map);
+				clearMapLayers();
 
-				markers.push(marker);
+				if (hasExitLocation) {
+					const exitMarker = L.circleMarker(exitLocation, {
+						radius: 8,
+						weight: 2,
+						color: '#34d399',
+						fillColor: '#34d399',
+						fillOpacity: 0.3
+					}).addTo(map);
+					exitMarker.bindPopup(createExitPopup(exitData));
+					mapLayers.push(exitMarker);
+				}
+
+				if (hasCfLocation) {
+					const cfMarker = L.circleMarker(cfCoordinates, {
+						radius: 8,
+						weight: 2,
+						color: '#61dbff',
+						fillColor: '#61dbff',
+						fillOpacity: 0.28
+					}).addTo(map);
+					cfMarker.bindPopup(createCfPopup(cfLocation));
+					mapLayers.push(cfMarker);
+				}
+
+				if (hasExitLocation && hasCfLocation) {
+					const transitLine = L.polyline([exitLocation, cfCoordinates], {
+						color: '#8be9ff',
+						weight: 2,
+						opacity: 0.85,
+						dashArray: '8 6',
+						renderer: mapSvgRenderer
+					}).addTo(map);
+					mapLayers.push(transitLine);
+					applyArrowStyleToPolyline(transitLine);
+					map.fitBounds([exitLocation, cfCoordinates], {
+						padding: [36, 36],
+						maxZoom: 6
+					});
+					return;
+				}
+
+				if (hasExitLocation) {
+					map.setView(exitLocation, 6);
+					return;
+				}
+
+				if (hasCfLocation) {
+					map.setView(cfCoordinates, 5);
+					return;
+				}
+
+				map.setView([20, 0], 2);
 			}, 100);
 		}
 
@@ -1891,6 +2123,7 @@ function generateHTML() {
 			setModeVisuals(false);
 			bindInputShortcut();
 			renderDashboard();
+			loadCfLocations();
 
 			const path = window.location.pathname.slice(1);
 			if (path && path.length > 3) {
