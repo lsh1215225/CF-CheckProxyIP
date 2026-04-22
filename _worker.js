@@ -867,6 +867,11 @@ function generateHTML() {
 			box-shadow: var(--shadow-soft);
 		}
 
+		.result-item > * {
+			position: relative;
+			z-index: 1;
+		}
+
 		.result-item::before {
 			content: '';
 			position: absolute;
@@ -883,6 +888,29 @@ function generateHTML() {
 
 		.result-item.error::before {
 			background: linear-gradient(180deg, #fb7185, #ef4444);
+		}
+
+		.result-flag-overlay {
+			position: absolute;
+			top: 18px;
+			right: -16px;
+			width: 168px;
+			height: 112px;
+			border-radius: 28px;
+			background-position: center;
+			background-repeat: no-repeat;
+			background-size: cover;
+			opacity: 0;
+			filter: blur(13px) saturate(1.08);
+			transform: rotate(7deg) scale(1.18);
+			transform-origin: top right;
+			pointer-events: none;
+			z-index: 0;
+			transition: opacity 0.24s ease;
+		}
+
+		.result-item.success.has-flag .result-flag-overlay {
+			opacity: 0.22;
 		}
 
 		.result-top {
@@ -1554,6 +1582,49 @@ function generateHTML() {
 			return organization;
 		}
 
+		function getExitCountryCode(exitData) {
+			const candidates = [
+				exitData?.countryCode,
+				exitData?.country_code,
+				exitData?.countryIsoCode,
+				exitData?.country_iso_code,
+				exitData?.country
+			];
+
+			for (const candidate of candidates) {
+				const normalized = String(candidate || '').trim().toLowerCase();
+				if (/^[a-z]{2}$/.test(normalized)) {
+					return normalized;
+				}
+			}
+
+			return '';
+		}
+
+		function getFlagUrlFromExitIps(exitIps) {
+			for (const entry of exitIps) {
+				const countryCode = getExitCountryCode(entry.exitData);
+				if (countryCode) {
+					return 'https://ipdata.co/flags/' + countryCode + '.png';
+				}
+			}
+
+			return '';
+		}
+
+		function updateResultFlag(itemObj, flagUrl) {
+			if (!itemObj?.flag) return;
+
+			if (flagUrl) {
+				itemObj.el.classList.add('has-flag');
+				itemObj.flag.style.backgroundImage = 'url("' + flagUrl + '")';
+				return;
+			}
+
+			itemObj.el.classList.remove('has-flag');
+			itemObj.flag.style.backgroundImage = '';
+		}
+
 		function renderExitList(container, exitIps) {
 			container.innerHTML = '';
 
@@ -1587,6 +1658,7 @@ function generateHTML() {
 			const div = document.createElement('div');
 			div.className = 'result-item';
 			div.innerHTML =
+				'<div class="result-flag-overlay" aria-hidden="true"></div>' +
 				'<div class="result-top">' +
 					'<div class="result-info">' +
 						'<span class="result-label">候选目标</span>' +
@@ -1605,6 +1677,7 @@ function generateHTML() {
 
 			return {
 				el: div,
+				flag: div.querySelector('.result-flag-overlay'),
 				info: div.querySelector('.result-info'),
 				badge: div.querySelector('.status-badge'),
 				meta: div.querySelector('.result-meta'),
@@ -1642,6 +1715,9 @@ function generateHTML() {
 						return formatExitNetwork(entry.exitData);
 					}), 'ASN / 运营商未知');
 					const latency = formatLatency(data.responseTime);
+					const flagUrl = getFlagUrlFromExitIps(exitIps);
+
+					updateResultFlag(itemObj, flagUrl);
 
 					itemObj.info.innerHTML =
 						'<span class="result-label">候选目标</span>' +
@@ -1659,6 +1735,7 @@ function generateHTML() {
 					renderExitList(itemObj.exitList, exitIps);
 				} else {
 					itemObj.el.className = 'result-item error';
+					updateResultFlag(itemObj, '');
 					itemObj.badge.className = 'status-badge status-error';
 					itemObj.badge.innerText = '不可用';
 					itemObj.info.innerHTML =
@@ -1673,6 +1750,7 @@ function generateHTML() {
 			} catch (error) {
 				completedCount++;
 				itemObj.el.className = 'result-item error';
+				updateResultFlag(itemObj, '');
 				itemObj.badge.className = 'status-badge status-error';
 				itemObj.badge.innerText = '失败';
 				itemObj.info.innerHTML =
