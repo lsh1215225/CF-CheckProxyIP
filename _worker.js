@@ -1528,6 +1528,32 @@ function generateHTML() {
 			return text.includes('ms') ? text : text + ' ms';
 		}
 
+		function joinUniqueValues(values, fallback) {
+			const uniqueValues = Array.from(new Set(values.filter(Boolean)));
+			return uniqueValues.length ? uniqueValues.join(' / ') : fallback;
+		}
+
+		function formatExitLocation(exitData) {
+			const country = String(exitData?.country || '').trim();
+			const city = String(exitData?.city || '').trim();
+			return [country, city].filter(Boolean).join(' · ');
+		}
+
+		function formatExitNetwork(exitData) {
+			const asn = String(exitData?.asn || '').trim();
+			const organization = String(exitData?.asOrganization || '').trim();
+
+			if (asn && organization) {
+				return 'AS' + asn + ' ' + organization;
+			}
+
+			if (asn) {
+				return 'AS' + asn;
+			}
+
+			return organization;
+		}
+
 		function renderExitList(container, exitIps) {
 			container.innerHTML = '';
 
@@ -1550,7 +1576,7 @@ function generateHTML() {
 				button.className = 'exit-ip-btn';
 				button.innerText = entry.ip;
 				button.addEventListener('click', function () {
-					showDetails(button, entry.ip, entry.exitData);
+					showDetails(button, entry.exitData);
 				});
 				container.appendChild(button);
 			});
@@ -1609,19 +1635,23 @@ function generateHTML() {
 						exitIps.push({ ip: data.probe_results.ipv6.exit.ip, exitData: data.probe_results.ipv6.exit });
 					}
 
-					const countries = Array.from(new Set(exitIps.map(function (entry) {
-						return entry.exitData.country;
-					}).filter(Boolean))).join(' / ');
+					const locations = joinUniqueValues(exitIps.map(function (entry) {
+						return formatExitLocation(entry.exitData);
+					}), '地区未知');
+					const networks = joinUniqueValues(exitIps.map(function (entry) {
+						return formatExitNetwork(entry.exitData);
+					}), 'ASN / 运营商未知');
 					const latency = formatLatency(data.responseTime);
 
 					itemObj.info.innerHTML =
 						'<span class="result-label">候选目标</span>' +
 						'<span class="result-ip">' + escapeHtml(data.candidate || target) + '</span>' +
-						'<span class="result-detail">代理验证通过，可继续查看出口位置、城市和 ASN 信息。</span>';
+						'<span class="result-detail">代理验证通过，可继续查看出口位置、网络信息和地图分布。</span>';
 
 					const metaParts = [
 						'<span class="meta-chip meta-chip-strong">' + escapeHtml(latency) + '</span>',
-						'<span class="meta-chip">' + escapeHtml(countries || '地区未知') + '</span>',
+						'<span class="meta-chip">' + escapeHtml(locations) + '</span>',
+						'<span class="meta-chip">' + escapeHtml(networks) + '</span>',
 						'<span class="meta-chip">' + escapeHtml((data.colo ? 'CF ' + data.colo + ' · ' : '') + exitIps.length + ' 个出口') + '</span>'
 					];
 					itemObj.meta.innerHTML = metaParts.join('');
@@ -1658,7 +1688,7 @@ function generateHTML() {
 			updateProgress();
 		}
 
-		function showDetails(button, ip, exitData) {
+		function showDetails(button, exitData) {
 			const item = button.closest('.result-item');
 			const container = item.querySelector('.map-container-wrapper');
 			const isOpen = container.style.display === 'block';
@@ -1690,18 +1720,7 @@ function generateHTML() {
 				});
 				markers = [];
 
-				const popupContent =
-					'<div class="map-popup">' +
-						'<b>落地 IP：</b>' + escapeHtml(ip) + '<br>' +
-						'<b>国家：</b>' + escapeHtml(exitData.country || '未知') + '<br>' +
-						'<b>城市：</b>' + escapeHtml(exitData.city || '未知') + '<br>' +
-						'<b>ASN：</b>AS' + escapeHtml(exitData.asn || '-') + '<br>' +
-						'<b>运营商：</b>' + escapeHtml(exitData.asOrganization || '未知') +
-					'</div>';
-
-				const marker = L.marker(loc).addTo(map)
-					.bindPopup(popupContent)
-					.openPopup();
+				const marker = L.marker(loc).addTo(map);
 
 				markers.push(marker);
 			}, 100);
