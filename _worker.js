@@ -1314,7 +1314,35 @@ function generateHTML() {
 			});
 		}
 
+		function normalizeBatchInputValue(value) {
+			return String(value ?? '')
+				.replace(/\\r\\n?/g, '\\n')
+				.replace(/[,\uFF0C]/g, '\\n');
+		}
+
+		function normalizeBatchInputControl(control) {
+			if (!control || control.tagName !== 'TEXTAREA') return;
+
+			const rawValue = control.value;
+			const nextValue = normalizeBatchInputValue(rawValue);
+
+			if (nextValue === rawValue) return;
+
+			const selectionStart = control.selectionStart ?? rawValue.length;
+			const selectionEnd = control.selectionEnd ?? rawValue.length;
+			const nextSelectionStart = normalizeBatchInputValue(rawValue.slice(0, selectionStart)).length;
+			const nextSelectionEnd = normalizeBatchInputValue(rawValue.slice(0, selectionEnd)).length;
+
+			control.value = nextValue;
+			control.setSelectionRange(nextSelectionStart, nextSelectionEnd);
+		}
+
 		function bindInputShortcut() {
+			inputList.addEventListener('input', function () {
+				if (!batchMode.checked) return;
+				normalizeBatchInputControl(inputList);
+			});
+
 			inputList.addEventListener('keydown', function (event) {
 				const shouldRunSingle = !batchMode.checked && event.key === 'Enter';
 				const shouldRunBatch = batchMode.checked && event.key === 'Enter' && (event.ctrlKey || event.metaKey);
@@ -1469,7 +1497,7 @@ function generateHTML() {
 
 			control.id = 'inputList';
 			control.className = 'input-control';
-			control.value = value || '';
+			control.value = isBatch ? normalizeBatchInputValue(value || '') : (value || '');
 			return control;
 		}
 
@@ -1700,7 +1728,7 @@ function generateHTML() {
 			if (!value) return;
 
 			const lines = batchMode.checked
-				? value.split('\\n').map(function (line) { return line.trim(); }).filter(Boolean)
+				? normalizeBatchInputValue(value).split('\\n').map(function (line) { return line.trim(); }).filter(Boolean)
 				: [value];
 
 			if (!batchMode.checked) {
