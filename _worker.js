@@ -1066,6 +1066,11 @@ function generateHTML() {
 		#global-map {
 			width: 100%;
 			height: 100%;
+			background: #09111d;
+		}
+
+		#global-map .leaflet-tile-pane {
+			filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.96) saturate(0.88);
 		}
 
 		.map-popup {
@@ -1336,7 +1341,10 @@ function generateHTML() {
 				zoomControl: false,
 				attributionControl: false
 			}).setView([20, 0], 2);
-			L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+			L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+				subdomains: ['1', '2', '3', '4'],
+				maxZoom: 18
+			}).addTo(map);
 			mapSvgRenderer = L.svg();
 			mapSvgRenderer.addTo(map);
 		}
