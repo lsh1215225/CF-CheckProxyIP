@@ -21,7 +21,7 @@ export default {
     }
 
     // 返回前端页面
-    return new Response(generateHTML(url.hostname), {
+    return new Response(generateHTML(), {
       headers: { 'Content-Type': 'text/html; charset=UTF-8' }
     });
   }
@@ -230,13 +230,13 @@ async function DoH查询(域名, 记录类型, DoH解析服务 = "https://cloudf
   }
 }
 
-function generateHTML(hostname) {
+function generateHTML() {
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Cloudflare ProxyIP Checker</title>
+	<title>Check ProxyIP</title>
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 	<style>
 		:root {
@@ -299,20 +299,125 @@ function generateHTML(hostname) {
 			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 		}
 
-		input[type="text"] {
+		.input-wrapper {
+			position: relative;
 			width: 100%;
-			padding: 0.75rem;
+			margin-bottom: 1rem;
+		}
+
+		input[type="text"], textarea {
+			width: 100%;
+			padding: 0.75rem 2.5rem 0.75rem 0.75rem;
 			background: rgba(15, 23, 42, 0.5);
 			border: 1px solid rgba(255, 255, 255, 0.1);
 			border-radius: 8px;
 			color: white;
-			margin-bottom: 1rem;
 			box-sizing: border-box;
 			font-family: inherit;
+			transition: all 0.3s;
 		}
 
-		button {
+		textarea {
+			height: 150px;
+			resize: vertical;
+			padding-right: 0.75rem;
+		}
+
+		.history-toggle {
+			position: absolute;
+			right: 10px;
+			top: 50%;
+			transform: translateY(-50%);
+			cursor: pointer;
+			color: #94a3b8;
+			padding: 5px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: color 0.2s;
+		}
+
+		.history-toggle:hover { color: white; }
+
+		.history-dropdown {
+			position: absolute;
+			top: calc(100% + 5px);
+			right: 0;
 			width: 100%;
+			background: #1e293b;
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			border-radius: 8px;
+			display: none;
+			z-index: 1000;
+			box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+			max-height: 300px;
+			overflow-y: auto;
+		}
+
+		.history-item {
+			padding: 0.75rem 1rem;
+			cursor: pointer;
+			font-size: 0.9rem;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+			transition: background 0.2s;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.history-item:last-child { border-bottom: none; }
+		.history-item:hover { background: rgba(255, 255, 255, 0.1); }
+
+		.action-group {
+			display: flex;
+			gap: 1rem;
+			align-items: center;
+		}
+
+		.batch-toggle {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			white-space: nowrap;
+			font-size: 0.9rem;
+			font-weight: 600;
+			color: #94a3b8;
+		}
+
+		/* Switch Style */
+		.switch {
+			position: relative;
+			display: inline-block;
+			width: 44px;
+			height: 22px;
+		}
+
+		.switch input { opacity: 0; width: 0; height: 0; }
+
+		.slider {
+			position: absolute;
+			cursor: pointer;
+			top: 0; left: 0; right: 0; bottom: 0;
+			background-color: rgba(255, 255, 255, 0.1);
+			transition: .4s;
+			border-radius: 34px;
+		}
+
+		.slider:before {
+			position: absolute;
+			content: "";
+			height: 16px; width: 16px;
+			left: 3px; bottom: 3px;
+			background-color: white;
+			transition: .4s;
+			border-radius: 50%;
+		}
+
+		input:checked + .slider { background-color: var(--primary-color); }
+		input:checked + .slider:before { transform: translateX(22px); }
+
+		button {
+			flex: 1;
 			padding: 0.75rem;
 			border-radius: 8px;
 			border: none;
@@ -336,7 +441,7 @@ function generateHTML(hostname) {
 			height: 24px;
 			overflow: hidden;
 			position: relative;
-			margin-top: 0.5rem;
+			margin-top: 1rem;
 		}
 
 		.progress-bar {
@@ -418,18 +523,46 @@ function generateHTML(hostname) {
 		#global-map { height: 100%; width: 100%; }
 
 		.leaflet-control-attribution, .leaflet-control-zoom { display: none !important; }
+
+		footer {
+			margin-top: auto;
+			padding: 2rem;
+			text-align: center;
+			color: #64748b;
+			font-size: 0.85rem;
+			width: 100%;
+			border-top: 1px solid rgba(255, 255, 255, 0.05);
+			background: rgba(15, 23, 42, 0.3);
+		}
 	</style>
 </head>
 <body>
 	<header>
-		<h1>CF ProxyIP Checker</h1>
+		<h1>Check ProxyIP</h1>
 		<p style="color: #94a3b8;">高性能 Cloudflare 代理 IP 检测工具</p>
 	</header>
 
 	<main>
 		<div class="glass-card">
-			<input type="text" id="inputList" placeholder="请输入 IP 或域名 (例如: ProxyIP.CMLiussss.net)">
-			<button id="checkBtn">开始检测</button>
+			<div class="input-wrapper" id="inputContainer">
+				<input type="text" id="inputList" placeholder="请输入 IP 或域名 (例如: ProxyIP.CMLiussss.net)">
+				<div class="history-toggle" id="historyBtn">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+				</div>
+				<div class="history-dropdown" id="historyDropdown"></div>
+			</div>
+			
+			<div class="action-group">
+				<div class="batch-toggle">
+					<span>批量检测</span>
+					<label class="switch">
+						<input type="checkbox" id="batchMode">
+						<span class="slider"></span>
+					</label>
+				</div>
+				<button id="checkBtn">开始检测</button>
+			</div>
+
 			<div id="progressContainer" class="progress-container">
 				<div id="progressBar" class="progress-bar"></div>
 				<div id="progressText" class="progress-text">0%</div>
@@ -439,6 +572,10 @@ function generateHTML(hostname) {
 		<div id="results" class="results-list"></div>
 	</main>
 
+	<footer>
+		© 2026 Check ProxyIP - 基于 Cloudflare Workers 构建的高性能 ProxyIP 验证服务 | 由 cmliu 开发维护
+	</footer>
+
 	<!-- Global Hidden Map Element -->
 	<div id="map-template">
 		<div id="global-map"></div>
@@ -447,12 +584,16 @@ function generateHTML(hostname) {
 	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 	<script>
 		const checkBtn = document.getElementById('checkBtn');
-		const inputList = document.getElementById('inputList');
+		let inputList = document.getElementById('inputList');
+		const inputContainer = document.getElementById('inputContainer');
+		const batchMode = document.getElementById('batchMode');
 		const resultsDiv = document.getElementById('results');
 		const progressContainer = document.getElementById('progressContainer');
 		const progressBar = document.getElementById('progressBar');
 		const progressText = document.getElementById('progressText');
 		const globalMap = document.getElementById('global-map');
+		const historyBtn = document.getElementById('historyBtn');
+		const historyDropdown = document.getElementById('historyDropdown');
 
 		let map = null;
 		let markers = [];
@@ -469,27 +610,106 @@ function generateHTML(hostname) {
 			L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 		}
 
+		// 批量模式切换
+		batchMode.addEventListener('change', () => {
+			const isBatch = batchMode.checked;
+			const val = inputList.value;
+			
+			if (isBatch) {
+				const textarea = document.createElement('textarea');
+				textarea.id = 'inputList';
+				textarea.placeholder = '请输入 IP 或域名，每行一个\\n例如:\\n8.223.63.150\\nProxyIP.CMLiussss.net';
+				textarea.value = val;
+				inputContainer.innerHTML = '';
+				inputContainer.appendChild(textarea);
+				inputList = textarea;
+			} else {
+				const input = document.createElement('input');
+				input.type = 'text';
+				input.id = 'inputList';
+				input.placeholder = '请输入 IP 或域名 (例如: ProxyIP.CMLiussss.net)';
+				input.value = val.split('\\n')[0]; // 只保留第一行
+				inputContainer.innerHTML = '';
+				inputContainer.appendChild(input);
+				inputContainer.appendChild(historyBtn);
+				inputContainer.appendChild(historyDropdown);
+				inputList = input;
+			}
+		});
+
+		// 历史记录逻辑
+		function getHistory() {
+			return JSON.parse(localStorage.getItem('cf_proxy_history') || '[]');
+		}
+
+		function saveHistory(val) {
+			if (!val || val.includes('\\n')) return; // 批量模式不保存复杂历史
+			let history = getHistory();
+			history = history.filter(item => item !== val);
+			history.unshift(val);
+			history = history.slice(0, 10);
+			localStorage.setItem('cf_proxy_history', JSON.stringify(history));
+			renderHistory();
+		}
+
+		function renderHistory() {
+			const history = getHistory();
+			historyDropdown.innerHTML = history.length ? history.map(item => \`
+				<div class="history-item" onclick="selectHistory('\${item}')">\${item}</div>
+			\`).join('') : '<div class="history-item" style="color:#64748b;cursor:default;">暂无历史记录</div>';
+		}
+
+		window.selectHistory = (val) => {
+			inputList.value = val;
+			historyDropdown.style.display = 'none';
+		};
+
+		historyBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			const isVisible = historyDropdown.style.display === 'block';
+			historyDropdown.style.display = isVisible ? 'none' : 'block';
+		});
+
+		document.addEventListener('click', () => {
+			if (historyDropdown) historyDropdown.style.display = 'none';
+		});
+
 		checkBtn.addEventListener('click', async () => {
-			const line = inputList.value.trim();
-			if (!line) return;
+			const value = inputList.value.trim();
+			if (!value) return;
+
+			const lines = batchMode.checked ? value.split('\\n').map(l => l.trim()).filter(l => l) : [value];
+			
+			if (!batchMode.checked) saveHistory(value);
 
 			resultsDiv.innerHTML = '';
 			progressContainer.style.display = 'block';
 			progressBar.style.width = '0%';
 			progressText.innerText = '正在解析...';
-			completedCount = 0;
 			
+			completedCount = 0;
+			successCount = 0;
+			totalTargets = 0;
+
 			try {
-				const res = await fetch(\`/resolve?proxyip=\${encodeURIComponent(line)}\`);
-				const targets = await res.json();
-				
-				if (Array.isArray(targets)) {
-					totalTargets = targets.length;
-					completedCount = 0;
-					successCount = 0;
+				const allResolvedTargets = [];
+				for (const line of lines) {
+					try {
+						const res = await fetch(\`/resolve?proxyip=\${encodeURIComponent(line)}\`);
+						const targets = await res.json();
+						if (Array.isArray(targets)) {
+							allResolvedTargets.push(...targets);
+						}
+					} catch (e) {
+						console.error('Resolve error for', line, e);
+					}
+				}
+
+				if (allResolvedTargets.length > 0) {
+					totalTargets = allResolvedTargets.length;
 					updateProgress();
 					
-					const checkPromises = targets.map(target => checkIP(target));
+					const checkPromises = allResolvedTargets.map(target => checkIP(target));
 					await Promise.all(checkPromises);
 					const failCount = totalTargets - successCount;
 					progressText.innerText = \`总计: \${totalTargets} | 有效: \${successCount} | 失败: \${failCount}\`;
@@ -515,8 +735,6 @@ function generateHTML(hostname) {
 				const data = await res.json();
 				
 				completedCount++;
-				updateProgress();
-
 				if (data.success) {
 					successCount++;
 					itemObj.el.className = 'result-item success';
@@ -547,6 +765,7 @@ function generateHTML(hostname) {
 						<span class="result-detail">无法通过此代理访问 Cloudflare</span>
 					\`;
 				}
+				updateProgress();
 			} catch (e) {
 				completedCount++;
 				updateProgress();
@@ -581,25 +800,17 @@ function generateHTML(hostname) {
 			const item = btn.closest('.result-item');
 			const container = item.querySelector('.map-container-wrapper');
 			
-			// If clicking the same IP and map is already there, do nothing or toggle? Let's just show.
-			const isAlreadyShowing = container.style.display === 'block' && container.contains(globalMap);
-
-			// Hide all map containers
 			document.querySelectorAll('.map-container-wrapper').forEach(c => c.style.display = 'none');
 			
 			initMap();
-			
-			// Move map to this container
 			container.appendChild(globalMap);
 			container.style.display = 'block';
 
-			// 使用 setTimeout 确保 DOM 渲染完成后再重算地图尺寸和中心
 			setTimeout(() => {
 				map.invalidateSize();
 				const loc = exitData.loc.split(',').map(Number);
 				map.setView(loc, 6);
 
-				// Clear markers
 				markers.forEach(m => map.removeLayer(m));
 				markers = [];
 
@@ -620,8 +831,8 @@ function generateHTML(hostname) {
 			}, 100);
 		};
 
-		// 自动执行路径中的参数
 		window.onload = () => {
+			renderHistory();
 			const path = window.location.pathname.slice(1);
 			if (path && path.length > 3) {
 				const decodedPath = decodeURIComponent(path);
