@@ -2748,7 +2748,7 @@ function generateHTML() {
 			const organization = String(exitData?.asOrganization || '').trim();
 
 			if (asn && organization) {
-				return 'AS' + asn + ' ' + organization;
+				return 'AS' + asn + ' · ' + organization;
 			}
 
 			if (asn) {
