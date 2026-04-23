@@ -1323,6 +1323,17 @@ function generateHTML() {
 			font-size: 0.9rem;
 		}
 
+		.site-footer a {
+			color: #bff4ff;
+			text-decoration: none;
+			border-bottom: 1px solid rgba(191, 244, 255, 0.28);
+		}
+
+		.site-footer a:hover {
+			color: #ffffff;
+			border-bottom-color: rgba(255, 255, 255, 0.42);
+		}
+
 		@media (max-width: 980px) {
 			.workspace-grid {
 				grid-template-columns: 1fr;
@@ -1605,7 +1616,9 @@ function generateHTML() {
 			</section>
 		</main>
 
-		<footer class="site-footer">© 2026 Check ProxyIP · 基于 Cloudflare Workers 构建，用于高效筛选可访问 Cloudflare 的代理目标。</footer>
+		<footer class="site-footer">
+			<div>© 2026 Check ProxyIP · 基于 Cloudflare Workers 构建，用于高效筛选可访问 Cloudflare 的代理目标。该服务由 <a href="https://github.com/cmliu/CF-Workers-CheckProxyIP" target="_blank" rel="noreferrer">cmliu</a> 维护 · <a href="https://t.me/CMLiussss" target="_blank" rel="noreferrer">CMLiussss 技术交流群</a></div>
+		</footer>
 	</div>
 
 	<div id="map-template">
