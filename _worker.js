@@ -1120,7 +1120,7 @@ function generateHTML() {
 
 		.result-flag-overlay {
 			position: absolute;
-			top: 18px;
+			top: 58px;
 			right: -16px;
 			width: 168px;
 			height: 112px;
