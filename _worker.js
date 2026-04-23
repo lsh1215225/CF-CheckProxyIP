@@ -1424,12 +1424,20 @@ function generateHTML() {
 		.meta-chip {
 			display: inline-flex;
 			align-items: center;
+			gap: 8px;
 			padding: 8px 12px;
 			border-radius: 999px;
 			background: rgba(97, 219, 255, 0.07);
 			border: 1px solid rgba(97, 219, 255, 0.12);
 			color: var(--text-soft);
 			font-size: 0.82rem;
+		}
+
+		.meta-chip svg {
+			width: 14px;
+			height: 14px;
+			flex: none;
+			opacity: 0.92;
 		}
 
 		.meta-chip-strong {
@@ -2455,6 +2463,24 @@ function generateHTML() {
 			});
 		}
 
+		function getMetaChipIcon(iconName) {
+			const icons = {
+				prep: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l3 2"></path></svg>',
+				location: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s6-4.35 6-10a6 6 0 1 0-12 0c0 5.65 6 10 6 10z"></path><circle cx="12" cy="11" r="2.5"></circle></svg>',
+				network: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="6" rx="2"></rect><rect x="3" y="14" width="18" height="6" rx="2"></rect><circle cx="7" cy="7" r="1"></circle><circle cx="7" cy="17" r="1"></circle><path d="M12 10v4"></path></svg>',
+				exits: '<svg viewBox="0 0 44 43" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M30.251 8.73438C30.251 6.13691 32.4057 4.03125 35.0635 4.03125C37.7214 4.03125 39.876 6.13691 39.876 8.73438C39.876 10.8649 38.4264 12.6646 36.4385 13.2427V15.4531C36.4385 19.1638 33.3605 22.1719 29.5635 22.1719H15.8135C13.5354 22.1719 11.6885 23.9767 11.6885 26.2031V29.7573C13.6764 30.3354 15.126 32.1351 15.126 34.2656C15.126 36.8631 12.9714 38.9688 10.3135 38.9688C7.65566 38.9688 5.50101 36.8631 5.50101 34.2656C5.50101 32.1351 6.95063 30.3354 8.93853 29.7573V13.2427C6.95063 12.6646 5.50101 10.8649 5.50101 8.73438C5.50101 6.13691 7.65566 4.03125 10.3135 4.03125C12.9714 4.03125 15.126 6.13691 15.126 8.73438C15.126 10.8649 13.6764 12.6646 11.6885 13.2427V20.8277C12.8376 19.9842 14.2658 19.4844 15.8135 19.4844H29.5635C31.8417 19.4844 33.6885 17.6795 33.6885 15.4531V13.2427C31.7006 12.6646 30.251 10.8649 30.251 8.73438Z" fill="currentColor"></path></svg>',
+				error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>',
+				info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 10v5"></path><circle cx="12" cy="7" r="1"></circle></svg>',
+				retry: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 5v6h-6"></path><path d="M4 19v-6h6"></path><path d="M7 17a7 7 0 0 0 11-4"></path><path d="M17 7A7 7 0 0 0 6 11"></path></svg>'
+			};
+			return icons[iconName] || icons.info;
+		}
+
+		function buildMetaChip(text, iconName, modifierClass) {
+			const className = modifierClass ? 'meta-chip ' + modifierClass : 'meta-chip';
+			return '<span class="' + className + '">' + getMetaChipIcon(iconName) + '<span>' + escapeHtml(text) + '</span></span>';
+		}
+
 		function normalizeBatchInputValue(value) {
 			return String(value ?? '')
 				.replace(/\\r\\n?/g, '\\n')
@@ -2791,7 +2817,7 @@ function generateHTML() {
 					'<span class="status-badge status-pending">等待中</span>' +
 				'</div>' +
 				'<div class="result-meta">' +
-					'<span class="meta-chip">准备建立检测请求</span>' +
+					buildMetaChip('准备建立检测请求', 'prep') +
 				'</div>' +
 				'<div class="exit-list"></div>' +
 				'<div class="map-container-wrapper"></div>';
@@ -2848,9 +2874,9 @@ function generateHTML() {
 						'<span class="result-detail">代理验证通过，可继续查看出口位置、网络信息和地图分布。</span>';
 
 					const metaParts = [
-						'<span class="meta-chip">' + escapeHtml(locations) + '</span>',
-						'<span class="meta-chip">' + escapeHtml(networks) + '</span>',
-						'<span class="meta-chip">' + escapeHtml(exitIps.length + '个出口') + '</span>'
+						buildMetaChip(locations, 'location'),
+						buildMetaChip(networks, 'network'),
+						buildMetaChip(exitIps.length + '个出口', 'exits')
 					];
 					itemObj.meta.innerHTML = metaParts.join('');
 
@@ -2865,8 +2891,8 @@ function generateHTML() {
 						'<span class="result-ip">' + escapeHtml(target) + '</span>' +
 						'<span class="result-detail">无法通过该代理访问 Cloudflare，请更换目标后重试。</span>';
 					itemObj.meta.innerHTML =
-						'<span class="meta-chip meta-chip-danger">检测未通过</span>' +
-						'<span class="meta-chip">' + escapeHtml(data.message || '远端返回失败结果') + '</span>';
+						buildMetaChip('检测未通过', 'error', 'meta-chip-danger') +
+						buildMetaChip(data.message || '远端返回失败结果', 'info');
 					itemObj.exitList.innerHTML = '';
 				}
 			} catch (error) {
@@ -2880,8 +2906,8 @@ function generateHTML() {
 					'<span class="result-ip">' + escapeHtml(target) + '</span>' +
 					'<span class="result-detail">检测请求执行失败，可能是接口异常或网络中断。</span>';
 				itemObj.meta.innerHTML =
-					'<span class="meta-chip meta-chip-danger">请求异常</span>' +
-					'<span class="meta-chip">请稍后重试</span>';
+					buildMetaChip('请求异常', 'error', 'meta-chip-danger') +
+					buildMetaChip('请稍后重试', 'retry');
 				itemObj.exitList.innerHTML = '';
 			}
 
