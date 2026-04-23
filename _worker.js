@@ -1877,6 +1877,10 @@ function generateHTML() {
 				padding: 22px 14px 32px;
 			}
 
+			.header-note {
+				flex: none;
+			}
+
 			.site-header,
 			.panel-header,
 			.results-header,
