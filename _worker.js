@@ -1533,8 +1533,16 @@ function generateHTML() {
 			font-size: 0.9rem;
 		}
 
-		.site-footer a {
+		.site-footer a,
+		#visit-count {
 			color: #bff4ff;
+			font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+			font-weight: 600;
+			letter-spacing: -0.02em;
+			font-variant-numeric: tabular-nums;
+		}
+
+		.site-footer a {
 			text-decoration: none;
 			border-bottom: 1px solid rgba(191, 244, 255, 0.28);
 		}
@@ -1741,7 +1749,8 @@ function generateHTML() {
 		}
 
 		html[data-theme='light'] .guide-card a,
-		html[data-theme='light'] .site-footer a {
+		html[data-theme='light'] .site-footer a,
+		html[data-theme='light'] #visit-count {
 			color: #0f7ab8;
 			border-bottom-color: rgba(14, 165, 233, 0.24);
 		}
@@ -2176,7 +2185,7 @@ function generateHTML() {
 		</main>
 
 		<footer class="site-footer">
-			<div>© 2026 Check ProxyIP · 基于 Cloudflare Workers 构建，用于高效筛选可访问 Cloudflare 的代理目标。该服务由 <a href="https://github.com/cmliu/CF-Workers-CheckProxyIP" target="_blank" rel="noreferrer">cmliu</a> 维护 · <a href="https://t.me/CMLiussss" target="_blank" rel="noreferrer">CMLiussss 技术交流群</a></div>
+			<div>© 2025 - 2026 Check ProxyIP · 基于 Cloudflare Workers 构建与运行 · 今日访问人数：<span id="visit-count">···</span> · 本站内容仅供技术交流与参考，站点维护：<a href="https://t.me/CMLiussss" target="_blank" rel="noreferrer">CMLiussss</a></div>
 		</footer>
 	</div>
 
@@ -2265,6 +2274,34 @@ function generateHTML() {
 		}
 
 		initializeTheme();
+
+		function getVisitStatsId() {
+			const hostname = String(window.location.hostname || window.location.host || '').trim().toLowerCase();
+			return hostname || 'unknown-host';
+		}
+
+		async function fetchVisitCount() {
+			const visitCountElement = document.getElementById('visit-count');
+			if (!visitCountElement) return;
+
+			try {
+				const response = await fetch('https://tongji.090227.xyz/?id=' + encodeURIComponent(getVisitStatsId()));
+				if (!response.ok) {
+					throw new Error('Failed to load visit count: ' + response.status);
+				}
+
+				const data = await response.json();
+				if (data && data.visitCount !== undefined) {
+					visitCountElement.textContent = data.visitCount;
+					return;
+				}
+
+				throw new Error('visitCount is missing in response');
+			} catch (error) {
+				console.error('Failed to fetch visit count', error);
+				visitCountElement.textContent = '加载失败';
+			}
+		}
 
 		function initMap() {
 			if (map) return;
@@ -3133,6 +3170,7 @@ function generateHTML() {
 			bindInputShortcut();
 			renderDashboard();
 			loadCfLocations();
+			fetchVisitCount();
 
 			const path = window.location.pathname.slice(1);
 			if (path && path.length > 3) {
