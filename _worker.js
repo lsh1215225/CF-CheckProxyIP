@@ -87,8 +87,12 @@ async function handleResolve(input) {
 	return results;
 }
 
+function stripTargetLabel(input) {
+	return String(input || '').split('#')[0].trim();
+}
+
 function parseTarget(input) {
-	let host = String(input || '').trim();
+	let host = stripTargetLabel(input);
 	let port = 443;
 
 	if (host.startsWith('[')) {
@@ -2547,7 +2551,14 @@ function generateHTML() {
 		function normalizeBatchInputValue(value) {
 			return String(value ?? '')
 				.replace(/\\r\\n?/g, '\\n')
-				.replace(/[,\uFF0C]/g, '\\n');
+				.replace(/[,\uFF0C]/g, '\\n')
+				.split('\\n')
+				.map(stripTargetLabel)
+				.join('\\n');
+		}
+
+		function stripTargetLabel(value) {
+			return String(value || '').split('#')[0].trim();
 		}
 
 		function normalizeBatchInputControl(control) {
@@ -3124,12 +3135,14 @@ function generateHTML() {
 		}
 
 		checkBtn.addEventListener('click', async function () {
-			const value = inputList.value.trim();
+			const value = batchMode.checked ? normalizeBatchInputValue(inputList.value) : stripTargetLabel(inputList.value);
 			if (!value) return;
 
 			const lines = batchMode.checked
 				? normalizeBatchInputValue(value).split('\\n').map(function (line) { return line.trim(); }).filter(Boolean)
 				: [value];
+
+			inputList.value = batchMode.checked ? lines.join('\\n') : value;
 
 			if (!batchMode.checked) {
 				saveHistory(value);
