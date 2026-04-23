@@ -178,11 +178,30 @@ function generateHTML() {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="color-scheme" content="light dark">
 	<title>Check ProxyIP</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+	<script>
+		(function () {
+			const storageKey = 'cf_proxy_theme';
+			let theme = 'dark';
+			try {
+				const storedTheme = localStorage.getItem(storageKey);
+				if (storedTheme === 'light' || storedTheme === 'dark') {
+					theme = storedTheme;
+				} else {
+					theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+				}
+			} catch (error) {
+				theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			}
+			document.documentElement.dataset.theme = theme;
+			document.documentElement.style.colorScheme = theme;
+		})();
+	</script>
 	<style>
 		:root {
 			--bg-base: #07111d;
@@ -206,6 +225,30 @@ function generateHTML() {
 			--radius-md: 20px;
 		}
 
+		html {
+			color-scheme: dark;
+		}
+
+		html[data-theme='light'] {
+			color-scheme: light;
+			--bg-base: #eef6fb;
+			--bg-deep: #ffffff;
+			--panel: rgba(255, 255, 255, 0.72);
+			--panel-strong: rgba(255, 255, 255, 0.92);
+			--line: rgba(95, 123, 150, 0.18);
+			--text: #10253d;
+			--text-soft: #23415a;
+			--muted: #61778f;
+			--accent: #0ea5e9;
+			--accent-strong: #14b8a6;
+			--accent-warm: #f59e0b;
+			--success: #059669;
+			--error: #e11d48;
+			--warning: #d97706;
+			--shadow: 0 24px 64px rgba(43, 67, 91, 0.14);
+			--shadow-soft: 0 16px 34px rgba(43, 67, 91, 0.1);
+		}
+
 		* {
 			box-sizing: border-box;
 		}
@@ -224,6 +267,7 @@ function generateHTML() {
 				radial-gradient(circle at 50% 110%, rgba(255, 184, 105, 0.16), transparent 30%),
 				linear-gradient(180deg, #06101b 0%, #081321 38%, #0a1624 100%);
 			overflow-x: hidden;
+			transition: background 0.28s ease, color 0.28s ease;
 		}
 
 		body::before {
@@ -239,10 +283,50 @@ function generateHTML() {
 			opacity: 0.12;
 		}
 
+		html[data-theme='light'] body {
+			background:
+				radial-gradient(circle at top left, rgba(20, 184, 166, 0.16), transparent 30%),
+				radial-gradient(circle at 88% 12%, rgba(14, 165, 233, 0.14), transparent 24%),
+				radial-gradient(circle at 50% 110%, rgba(245, 158, 11, 0.12), transparent 28%),
+				linear-gradient(180deg, #f6fbff 0%, #eef5fb 44%, #e8f1f7 100%);
+		}
+
+		html[data-theme='light'] body::before {
+			background-image:
+				linear-gradient(rgba(16, 37, 61, 0.05) 1px, transparent 1px),
+				linear-gradient(90deg, rgba(16, 37, 61, 0.05) 1px, transparent 1px);
+			mask-image: linear-gradient(180deg, rgba(255, 255, 255, 0.68), transparent 92%);
+			opacity: 0.28;
+		}
+
 		button,
 		input,
 		textarea {
 			font: inherit;
+		}
+
+		body,
+		.surface-card,
+		.input-control,
+		.history-toggle,
+		.history-dropdown,
+		.mode-card,
+		.progress-container,
+		.metric-card,
+		.results-pill,
+		.results-empty,
+		.empty-visual,
+		.guide-card,
+		.guide-flow,
+		.guide-step,
+		.guide-tip,
+		.result-item,
+		.status-badge,
+		.meta-chip,
+		.exit-ip-btn,
+		.map-container-wrapper,
+		.theme-toggle {
+			transition: background 0.28s ease, border-color 0.28s ease, color 0.28s ease, box-shadow 0.28s ease, opacity 0.28s ease;
 		}
 
 		.page-shell {
@@ -276,6 +360,14 @@ function generateHTML() {
 			background: rgba(45, 212, 191, 0.18);
 		}
 
+		html[data-theme='light'] .ambient-one {
+			background: rgba(56, 189, 248, 0.2);
+		}
+
+		html[data-theme='light'] .ambient-two {
+			background: rgba(45, 212, 191, 0.16);
+		}
+
 		.site-header,
 		.site-main,
 		.site-footer {
@@ -302,9 +394,10 @@ function generateHTML() {
 		.brand-chip {
 			display: inline-flex;
 			align-items: center;
-			gap: 10px;
+			justify-content: space-between;
+			gap: 14px;
 			align-self: flex-start;
-			padding: 10px 14px;
+			padding: 8px 10px 8px 14px;
 			border-radius: 999px;
 			border: 1px solid rgba(97, 219, 255, 0.16);
 			background: rgba(12, 26, 43, 0.66);
@@ -313,6 +406,13 @@ function generateHTML() {
 			letter-spacing: 0.08em;
 			text-transform: uppercase;
 			backdrop-filter: blur(12px);
+		}
+
+		.brand-chip-text {
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			min-width: 0;
 		}
 
 		.brand-dot {
@@ -339,6 +439,108 @@ function generateHTML() {
 			color: var(--muted);
 			line-height: 1.7;
 			text-align: right;
+			flex: 0 1 420px;
+		}
+
+		.theme-toggle {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 0;
+			border: none;
+			border-radius: 0;
+			background: transparent;
+			color: var(--text);
+			box-shadow: none;
+			backdrop-filter: none;
+			cursor: pointer;
+			min-width: 0;
+			transition: color 0.28s ease;
+		}
+
+		.theme-toggle:hover {
+			transform: none;
+		}
+
+		.theme-toggle:focus-visible {
+			outline: none;
+		}
+
+		.theme-toggle-switch {
+			position: relative;
+			width: 56px;
+			height: 30px;
+			flex: none;
+			border-radius: 999px;
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			background: linear-gradient(135deg, rgba(97, 219, 255, 0.18), rgba(45, 212, 191, 0.12));
+			box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+			transition: transform 0.2s ease, background 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
+		}
+
+		.theme-toggle:hover .theme-toggle-switch {
+			transform: translateY(-1px);
+			border-color: rgba(97, 219, 255, 0.2);
+			box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+		}
+
+		.theme-toggle:focus-visible .theme-toggle-switch {
+			box-shadow: 0 0 0 4px rgba(97, 219, 255, 0.12), 0 10px 24px rgba(0, 0, 0, 0.18);
+		}
+
+		.theme-toggle-icon {
+			position: absolute;
+			top: 9px;
+			width: 12px;
+			height: 12px;
+			color: rgba(255, 255, 255, 0.72);
+			pointer-events: none;
+		}
+
+		.theme-toggle-icon-light {
+			left: 8px;
+			color: #ffd97d;
+		}
+
+		.theme-toggle-icon-dark {
+			right: 8px;
+			color: #d9efff;
+		}
+
+		.theme-toggle-thumb {
+			position: absolute;
+			top: 3px;
+			left: 3px;
+			width: 22px;
+			height: 22px;
+			border-radius: 50%;
+			background: linear-gradient(135deg, #ffffff, #d9e9f7);
+			box-shadow: 0 6px 14px rgba(0, 0, 0, 0.24);
+			transform: translateX(28px);
+			transition: transform 0.28s ease, background 0.28s ease, box-shadow 0.28s ease;
+		}
+
+		html[data-theme='light'] .theme-toggle-thumb {
+			transform: translateX(0);
+			background: linear-gradient(135deg, #fff9d9, #ffd88a);
+			box-shadow: 0 8px 16px rgba(168, 116, 23, 0.18);
+		}
+
+		html[data-theme='light'] .theme-toggle-switch {
+			border-color: rgba(84, 112, 139, 0.14);
+			background: linear-gradient(135deg, rgba(254, 240, 138, 0.56), rgba(125, 211, 252, 0.34));
+		}
+
+		html[data-theme='light'] .theme-toggle-icon {
+			color: #53708d;
+		}
+
+		html[data-theme='light'] .theme-toggle-icon-light {
+			color: #d97706;
+		}
+
+		html[data-theme='light'] .theme-toggle-icon-dark {
+			color: #2563eb;
 		}
 
 		.surface-card {
@@ -1334,6 +1536,326 @@ function generateHTML() {
 			border-bottom-color: rgba(255, 255, 255, 0.42);
 		}
 
+		html[data-theme='light'] .brand-chip {
+			border-color: rgba(86, 124, 158, 0.18);
+			background: rgba(255, 255, 255, 0.76);
+			color: #1d5d83;
+		}
+
+		html[data-theme='light'] .brand-title {
+			color: #10253d;
+		}
+
+		html[data-theme='light'] .theme-toggle {
+			background: transparent;
+			border-color: transparent;
+			box-shadow: none;
+		}
+
+		html[data-theme='light'] .surface-card {
+			background:
+				linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72)),
+				var(--panel);
+		}
+
+		html[data-theme='light'] .section-kicker,
+		html[data-theme='light'] .guide-card-label {
+			color: #0f7ab8;
+		}
+
+		html[data-theme='light'] .section-kicker::before,
+		html[data-theme='light'] .guide-card-label::before {
+			background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.72));
+		}
+
+		html[data-theme='light'] .panel-badge,
+		html[data-theme='light'] .guide-badge {
+			background: rgba(14, 165, 233, 0.08);
+			border-color: rgba(14, 165, 233, 0.16);
+			color: #0f5f8e;
+		}
+
+		html[data-theme='light'] .field-label {
+			color: #17324a;
+		}
+
+		html[data-theme='light'] .input-control {
+			background: rgba(255, 255, 255, 0.82);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+		}
+
+		html[data-theme='light'] .input-control::placeholder {
+			color: #7b8fa3;
+		}
+
+		html[data-theme='light'] .input-control:focus {
+			background: #ffffff;
+			border-color: rgba(14, 165, 233, 0.3);
+			box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+		}
+
+		html[data-theme='light'] .history-toggle {
+			border-color: rgba(95, 123, 150, 0.14);
+			background: rgba(255, 255, 255, 0.78);
+			color: #5b738b;
+		}
+
+		html[data-theme='light'] .history-toggle:hover {
+			color: #10253d;
+			background: rgba(14, 165, 233, 0.1);
+		}
+
+		html[data-theme='light'] .history-dropdown {
+			border-color: rgba(95, 123, 150, 0.14);
+			background: rgba(255, 255, 255, 0.96);
+			box-shadow: 0 20px 36px rgba(43, 67, 91, 0.16);
+		}
+
+		html[data-theme='light'] .history-item:hover {
+			background: rgba(14, 165, 233, 0.08);
+			color: #10253d;
+		}
+
+		html[data-theme='light'] .history-item.is-empty {
+			color: #7f92a6;
+		}
+
+		html[data-theme='light'] .mode-card,
+		html[data-theme='light'] .progress-container,
+		html[data-theme='light'] .metric-card,
+		html[data-theme='light'] .results-empty,
+		html[data-theme='light'] .guide-flow,
+		html[data-theme='light'] .guide-step,
+		html[data-theme='light'] .map-container-wrapper {
+			background: rgba(255, 255, 255, 0.62);
+			border-color: rgba(95, 123, 150, 0.14);
+		}
+
+		html[data-theme='light'] .slider {
+			background: rgba(14, 165, 233, 0.12);
+			border-color: rgba(95, 123, 150, 0.14);
+		}
+
+		html[data-theme='light'] .slider::before {
+			background: #ffffff;
+			box-shadow: 0 6px 14px rgba(43, 67, 91, 0.18);
+		}
+
+		html[data-theme='light'] .primary-btn {
+			box-shadow: 0 18px 34px rgba(14, 165, 233, 0.18);
+		}
+
+		html[data-theme='light'] .primary-btn:hover {
+			box-shadow: 0 22px 40px rgba(14, 165, 233, 0.22);
+		}
+
+		html[data-theme='light'] .results-pill {
+			border-color: rgba(95, 123, 150, 0.16);
+			background: rgba(255, 255, 255, 0.72);
+			color: #16324a;
+		}
+
+		html[data-theme='light'] .results-pill.state-idle {
+			color: #365168;
+		}
+
+		html[data-theme='light'] .results-pill.state-resolving {
+			background: rgba(245, 158, 11, 0.12);
+			border-color: rgba(245, 158, 11, 0.18);
+			color: #9a6706;
+		}
+
+		html[data-theme='light'] .results-pill.state-running {
+			background: rgba(14, 165, 233, 0.12);
+			border-color: rgba(14, 165, 233, 0.18);
+			color: #0f5f8e;
+		}
+
+		html[data-theme='light'] .results-pill.state-done {
+			background: rgba(5, 150, 105, 0.12);
+			border-color: rgba(5, 150, 105, 0.18);
+			color: #047857;
+		}
+
+		html[data-theme='light'] .results-pill.state-empty,
+		html[data-theme='light'] .results-pill.state-error {
+			background: rgba(225, 29, 72, 0.1);
+			border-color: rgba(225, 29, 72, 0.16);
+			color: #be123c;
+		}
+
+		html[data-theme='light'] .empty-visual {
+			background:
+				radial-gradient(circle at 30% 30%, rgba(14, 165, 233, 0.18), transparent 42%),
+				linear-gradient(160deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.4));
+			border-color: rgba(95, 123, 150, 0.14);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+		}
+
+		html[data-theme='light'] .empty-visual span:nth-child(1) {
+			background: rgba(14, 165, 233, 0.18);
+		}
+
+		html[data-theme='light'] .empty-visual span:nth-child(2) {
+			background: rgba(20, 184, 166, 0.28);
+		}
+
+		html[data-theme='light'] .empty-visual span:nth-child(3) {
+			background: rgba(16, 37, 61, 0.12);
+		}
+
+		html[data-theme='light'] .guide-shell::before {
+			background:
+				radial-gradient(circle at top right, rgba(14, 165, 233, 0.1), transparent 30%),
+				radial-gradient(circle at bottom left, rgba(20, 184, 166, 0.08), transparent 28%);
+		}
+
+		html[data-theme='light'] .guide-card {
+			border-color: rgba(95, 123, 150, 0.14);
+			background:
+				linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.56)),
+				rgba(255, 255, 255, 0.74);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+		}
+
+		html[data-theme='light'] .guide-card-accent {
+			background:
+				radial-gradient(circle at top left, rgba(14, 165, 233, 0.12), transparent 38%),
+				linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.56)),
+				rgba(255, 255, 255, 0.78);
+		}
+
+		html[data-theme='light'] .guide-card-warm {
+			background:
+				radial-gradient(circle at top right, rgba(245, 158, 11, 0.12), transparent 34%),
+				linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.56)),
+				rgba(255, 255, 255, 0.78);
+		}
+
+		html[data-theme='light'] .guide-card a,
+		html[data-theme='light'] .site-footer a {
+			color: #0f7ab8;
+			border-bottom-color: rgba(14, 165, 233, 0.24);
+		}
+
+		html[data-theme='light'] .guide-card a:hover,
+		html[data-theme='light'] .site-footer a:hover {
+			color: #10253d;
+			border-bottom-color: rgba(16, 37, 61, 0.2);
+		}
+
+		html[data-theme='light'] .guide-quote {
+			border-color: rgba(245, 158, 11, 0.16);
+			background: rgba(245, 158, 11, 0.08);
+			color: #9a6706;
+		}
+
+		html[data-theme='light'] .guide-step.is-source strong {
+			color: #0284c7;
+		}
+
+		html[data-theme='light'] .guide-step.is-proxy strong {
+			color: #0f766e;
+		}
+
+		html[data-theme='light'] .guide-step.is-target strong {
+			color: #b45309;
+		}
+
+		html[data-theme='light'] .guide-arrow {
+			color: rgba(14, 165, 233, 0.56);
+		}
+
+		html[data-theme='light'] .guide-tip {
+			border-color: rgba(14, 165, 233, 0.14);
+			background:
+				linear-gradient(90deg, rgba(14, 165, 233, 0.08), rgba(20, 184, 166, 0.06), rgba(245, 158, 11, 0.06)),
+				rgba(255, 255, 255, 0.62);
+			color: #365168;
+		}
+
+		html[data-theme='light'] .guide-tip strong {
+			color: #10253d;
+		}
+
+		html[data-theme='light'] .result-item {
+			border-color: rgba(95, 123, 150, 0.14);
+			background:
+				linear-gradient(180deg, rgba(255, 255, 255, 0.88), transparent 38%),
+				var(--panel-strong);
+		}
+
+		html[data-theme='light'] .result-item::before {
+			background: rgba(121, 140, 159, 0.38);
+		}
+
+		html[data-theme='light'] .status-badge {
+			border-color: rgba(95, 123, 150, 0.14);
+			background: rgba(255, 255, 255, 0.72);
+			color: #16324a;
+		}
+
+		html[data-theme='light'] .status-success {
+			background: rgba(5, 150, 105, 0.12);
+			border-color: rgba(5, 150, 105, 0.16);
+			color: #047857;
+		}
+
+		html[data-theme='light'] .status-error {
+			background: rgba(225, 29, 72, 0.1);
+			border-color: rgba(225, 29, 72, 0.16);
+			color: #be123c;
+		}
+
+		html[data-theme='light'] .status-pending {
+			background: rgba(245, 158, 11, 0.12);
+			border-color: rgba(245, 158, 11, 0.16);
+			color: #9a6706;
+		}
+
+		html[data-theme='light'] .meta-chip {
+			background: rgba(14, 165, 233, 0.08);
+			border-color: rgba(14, 165, 233, 0.12);
+			color: #23415a;
+		}
+
+		html[data-theme='light'] .meta-chip-strong {
+			background: rgba(14, 165, 233, 0.12);
+			border-color: rgba(14, 165, 233, 0.18);
+			color: #075985;
+		}
+
+		html[data-theme='light'] .meta-chip-danger {
+			background: rgba(225, 29, 72, 0.08);
+			border-color: rgba(225, 29, 72, 0.14);
+			color: #be123c;
+		}
+
+		html[data-theme='light'] .exit-ip-btn {
+			border-color: rgba(5, 150, 105, 0.18);
+			background: linear-gradient(135deg, rgba(5, 150, 105, 0.08), rgba(14, 165, 233, 0.08));
+			color: #17324a;
+		}
+
+		html[data-theme='light'] .exit-ip-btn:hover {
+			border-color: rgba(14, 165, 233, 0.24);
+			background: linear-gradient(135deg, rgba(5, 150, 105, 0.12), rgba(14, 165, 233, 0.12));
+		}
+
+		html[data-theme='light'] .exit-ip-btn.is-active {
+			border-color: rgba(14, 165, 233, 0.32);
+			background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(5, 150, 105, 0.12));
+			box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.1), 0 0 0 1px rgba(14, 165, 233, 0.08);
+		}
+
+		html[data-theme='light'] #global-map {
+			background: #dfeaf3;
+		}
+
+		html[data-theme='light'] #global-map .leaflet-tile-pane {
+			filter: none;
+		}
+
 		@media (max-width: 980px) {
 			.workspace-grid {
 				grid-template-columns: 1fr;
@@ -1435,8 +1957,29 @@ function generateHTML() {
 			<div class="brand">
 				<div class="brand-title">Check ProxyIP</div>
 				<div class="brand-chip">
-					<span class="brand-dot"></span>
-					<span>Cloudflare Workers Toolkit</span>
+					<span class="brand-chip-text">
+						<span class="brand-dot"></span>
+						<span>Cloudflare Workers Toolkit</span>
+					</span>
+					<button class="theme-toggle" type="button" id="themeToggle" aria-label="切换日间和夜间模式" title="切换日间和夜间模式">
+						<span class="theme-toggle-switch" aria-hidden="true">
+							<svg class="theme-toggle-icon theme-toggle-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<circle cx="12" cy="12" r="4"></circle>
+								<path d="M12 2v2"></path>
+								<path d="M12 20v2"></path>
+								<path d="m4.93 4.93 1.41 1.41"></path>
+								<path d="m17.66 17.66 1.41 1.41"></path>
+								<path d="M2 12h2"></path>
+								<path d="M20 12h2"></path>
+								<path d="m6.34 17.66-1.41 1.41"></path>
+								<path d="m19.07 4.93-1.41 1.41"></path>
+							</svg>
+							<span class="theme-toggle-thumb"></span>
+							<svg class="theme-toggle-icon theme-toggle-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"></path>
+							</svg>
+						</span>
+					</button>
 				</div>
 			</div>
 			<div class="header-note">基于 Cloudflare 的 ProxyIP 检测工具，支持单个或批量目标解析、可用性验证与出口信息查看。</div>
@@ -1650,6 +2193,9 @@ function generateHTML() {
 		const resultsEmpty = document.getElementById('resultsEmpty');
 		const emptyStateTitle = document.getElementById('emptyStateTitle');
 		const emptyStateDescription = document.getElementById('emptyStateDescription');
+		const themeToggle = document.getElementById('themeToggle');
+		const THEME_STORAGE_KEY = 'cf_proxy_theme';
+		const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
 		let map = null;
 		let mapLayers = [];
@@ -1662,6 +2208,47 @@ function generateHTML() {
 		let successCount = 0;
 		let inputCount = 0;
 		let appState = 'idle';
+
+		function getStoredTheme() {
+			try {
+				const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+				return storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : '';
+			} catch {
+				return '';
+			}
+		}
+
+		function getSystemTheme() {
+			return systemThemeQuery.matches ? 'dark' : 'light';
+		}
+
+		function applyTheme(theme, source) {
+			const nextTheme = theme === 'light' ? 'light' : 'dark';
+			const isDark = nextTheme === 'dark';
+
+			document.documentElement.dataset.theme = nextTheme;
+			document.documentElement.style.colorScheme = nextTheme;
+
+			if (!themeToggle) return;
+
+			themeToggle.setAttribute('aria-pressed', String(isDark));
+			themeToggle.setAttribute(
+				'aria-label',
+				isDark
+					? '当前为夜间模式，点击切换到日间模式。'
+					: '当前为日间模式，点击切换到夜间模式。'
+			);
+			themeToggle.title = source === 'stored'
+				? (isDark ? '夜间模式，已保存到本地' : '日间模式，已保存到本地')
+				: (isDark ? '夜间模式，当前跟随系统' : '日间模式，当前跟随系统');
+		}
+
+		function initializeTheme() {
+			const storedTheme = getStoredTheme();
+			applyTheme(storedTheme || getSystemTheme(), storedTheme ? 'stored' : 'system');
+		}
+
+		initializeTheme();
 
 		function initMap() {
 			if (map) return;
@@ -2414,6 +3001,31 @@ function generateHTML() {
 				historyDropdown.style.display = 'none';
 			}
 		});
+
+		if (themeToggle) {
+			themeToggle.addEventListener('click', function () {
+				const currentTheme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+				const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+				try {
+					localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+				} catch (error) {
+					console.warn('Failed to persist theme preference', error);
+				}
+				applyTheme(nextTheme, 'stored');
+			});
+		}
+
+		if (systemThemeQuery.addEventListener) {
+			systemThemeQuery.addEventListener('change', function (event) {
+				if (getStoredTheme()) return;
+				applyTheme(event.matches ? 'dark' : 'light', 'system');
+			});
+		} else if (systemThemeQuery.addListener) {
+			systemThemeQuery.addListener(function (event) {
+				if (getStoredTheme()) return;
+				applyTheme(event.matches ? 'dark' : 'light', 'system');
+			});
+		}
 
 		checkBtn.addEventListener('click', async function () {
 			const value = inputList.value.trim();
