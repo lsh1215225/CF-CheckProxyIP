@@ -1523,9 +1523,25 @@ function generateHTML() {
 			color: #081826;
 		}
 
-		.leaflet-control-attribution,
 		.leaflet-control-zoom {
 			display: none !important;
+		}
+
+		.leaflet-control-attribution {
+			display: block !important;
+			margin: 0 !important;
+			padding: 4px 8px !important;
+			border-radius: 12px 0 0 0;
+			background: rgba(9, 17, 29, 0.78) !important;
+			backdrop-filter: blur(10px);
+			box-shadow: 0 10px 24px rgba(3, 7, 18, 0.22);
+			color: rgba(223, 240, 255, 0.84) !important;
+			font-size: 11px;
+			line-height: 1.4;
+		}
+
+		.leaflet-control-attribution a {
+			color: inherit !important;
 		}
 
 		.site-footer {
@@ -1871,6 +1887,12 @@ function generateHTML() {
 
 		html[data-theme='light'] #global-map .leaflet-tile-pane {
 			filter: none;
+		}
+
+		html[data-theme='light'] .leaflet-control-attribution {
+			background: rgba(255, 255, 255, 0.92) !important;
+			box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+			color: rgba(15, 23, 42, 0.72) !important;
 		}
 
 		@media (max-width: 980px) {
@@ -2221,6 +2243,11 @@ function generateHTML() {
 		const themeToggle = document.getElementById('themeToggle');
 		const THEME_STORAGE_KEY = 'cf_proxy_theme';
 		const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+		const BASE_MAP_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+		const BASE_MAP_TILE_OPTIONS = {
+			maxZoom: 19,
+			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer noopener">OpenStreetMap</a> contributors'
+		};
 
 		let map = null;
 		let mapLayers = [];
@@ -2307,12 +2334,11 @@ function generateHTML() {
 			if (map) return;
 			map = L.map('global-map', {
 				zoomControl: false,
-				attributionControl: false
+				attributionControl: true
 			}).setView([20, 0], 2);
-			L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
-				subdomains: ['1', '2', '3', '4'],
-				maxZoom: 18
-			}).addTo(map);
+			map.attributionControl.setPrefix(false);
+			// OpenStreetMap provides broader global coverage than AMap for international checks.
+			L.tileLayer(BASE_MAP_TILE_URL, BASE_MAP_TILE_OPTIONS).addTo(map);
 			mapSvgRenderer = L.svg();
 			mapSvgRenderer.addTo(map);
 		}

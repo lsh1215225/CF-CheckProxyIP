@@ -239,7 +239,7 @@ https://your-worker.example.workers.dev/8.223.63.150:443
 | Cloudflare DoH | 解析 `A` / `AAAA` / `TXT` | `https://cloudflare-dns.com/dns-query` |
 | Cloudflare Locations | 获取机房经纬度 | `https://speed.cloudflare.com/locations` |
 | Leaflet | 地图组件 | `https://unpkg.com/leaflet@1.9.4` |
-| 高德瓦片 | 地图底图 | `https://webrd0{s}.is.autonavi.com/...` |
+| OpenStreetMap 瓦片 | 地图底图（国际覆盖） | `https://tile.openstreetmap.org/{z}/{x}/{y}.png` |
 | 国旗图片 | 出口国家旗帜 | `https://ipdata.co/flags/...` |
 | Google Fonts | 页面字体 | `https://fonts.googleapis.com` |
 
