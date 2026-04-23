@@ -87,12 +87,8 @@ async function handleResolve(input) {
 	return results;
 }
 
-function stripTargetLabel(input) {
-	return String(input || '').split('#')[0].trim();
-}
-
 function parseTarget(input) {
-	let host = stripTargetLabel(input);
+	let host = String(input || '').split('#')[0].trim();
 	let port = 443;
 
 	if (host.startsWith('[')) {
