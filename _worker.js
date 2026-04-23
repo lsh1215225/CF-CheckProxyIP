@@ -1881,6 +1881,10 @@ function generateHTML() {
 				flex: none;
 			}
 
+			.results-list:not(:empty) {
+				margin-top: 18px;
+			}
+
 			.site-header,
 			.panel-header,
 			.results-header,
