@@ -854,6 +854,235 @@ function generateHTML() {
 			gap: 16px;
 		}
 
+		.guide-shell {
+			margin-top: 24px;
+			padding: 28px;
+			position: relative;
+			overflow: hidden;
+			z-index: 1;
+		}
+
+		.guide-shell::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background:
+				radial-gradient(circle at top right, rgba(97, 219, 255, 0.14), transparent 30%),
+				radial-gradient(circle at bottom left, rgba(45, 212, 191, 0.12), transparent 28%);
+			pointer-events: none;
+		}
+
+		.guide-header,
+		.guide-grid,
+		.guide-flow,
+		.guide-tip {
+			position: relative;
+			z-index: 1;
+		}
+
+		.guide-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			gap: 20px;
+		}
+
+		.guide-badge {
+			display: inline-flex;
+			align-items: center;
+			align-self: flex-start;
+			padding: 10px 14px;
+			border-radius: 999px;
+			background: rgba(97, 219, 255, 0.08);
+			border: 1px solid rgba(97, 219, 255, 0.16);
+			color: #c6f5ff;
+			font-size: 0.82rem;
+			font-weight: 600;
+			white-space: nowrap;
+		}
+
+		.guide-grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 16px;
+			margin-top: 24px;
+		}
+
+		.guide-grid-secondary {
+			margin-top: 18px;
+		}
+
+		.guide-card {
+			padding: 24px;
+			border-radius: 26px;
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			background:
+				linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 44%),
+				rgba(8, 20, 34, 0.6);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+		}
+
+		.guide-card-accent {
+			background:
+				radial-gradient(circle at top left, rgba(97, 219, 255, 0.16), transparent 38%),
+				linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 46%),
+				rgba(9, 22, 37, 0.68);
+		}
+
+		.guide-card-warm {
+			background:
+				radial-gradient(circle at top right, rgba(255, 184, 105, 0.16), transparent 34%),
+				linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 46%),
+				rgba(14, 23, 35, 0.72);
+		}
+
+		.guide-card-label {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			margin-bottom: 14px;
+			font-size: 0.74rem;
+			font-weight: 700;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: #9feaff;
+		}
+
+		.guide-card-label::before {
+			content: '';
+			width: 18px;
+			height: 1px;
+			background: rgba(97, 219, 255, 0.72);
+		}
+
+		.guide-card h3 {
+			margin: 0;
+			font-size: 1.18rem;
+			line-height: 1.4;
+			letter-spacing: -0.02em;
+		}
+
+		.guide-card p {
+			margin: 14px 0 0;
+			color: var(--muted);
+			line-height: 1.8;
+		}
+
+		.guide-card a {
+			color: #bff4ff;
+			text-decoration: none;
+			border-bottom: 1px solid rgba(191, 244, 255, 0.26);
+		}
+
+		.guide-card a:hover {
+			color: #ffffff;
+			border-bottom-color: rgba(255, 255, 255, 0.42);
+		}
+
+		.guide-quote {
+			margin-top: 16px;
+			padding: 14px 16px;
+			border-radius: 20px;
+			border: 1px solid rgba(251, 191, 36, 0.18);
+			background: rgba(251, 191, 36, 0.1);
+			color: #ffe7a7;
+			font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+			line-height: 1.6;
+		}
+
+		.guide-flow {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+			gap: 14px;
+			align-items: center;
+			margin-top: 18px;
+			padding: 24px;
+			border-radius: 28px;
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			background:
+				linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 60%),
+				rgba(255, 255, 255, 0.03);
+		}
+
+		.guide-step {
+			padding: 18px 16px;
+			border-radius: 22px;
+			text-align: center;
+			border: 1px solid rgba(255, 255, 255, 0.07);
+			background: rgba(255, 255, 255, 0.03);
+		}
+
+		.guide-step strong {
+			display: block;
+			font-size: 1rem;
+			letter-spacing: -0.02em;
+		}
+
+		.guide-step span {
+			display: block;
+			margin-top: 8px;
+			font-size: 0.9rem;
+			color: var(--muted);
+			line-height: 1.65;
+		}
+
+		.guide-step.is-source strong {
+			color: #91ecff;
+		}
+
+		.guide-step.is-proxy strong {
+			color: #8ef5d9;
+		}
+
+		.guide-step.is-target strong {
+			color: #ffd08b;
+		}
+
+		.guide-arrow {
+			font-size: 1.5rem;
+			font-weight: 700;
+			color: rgba(97, 219, 255, 0.82);
+		}
+
+		.guide-flow-caption {
+			grid-column: 1 / -1;
+			margin: 2px 0 0;
+			text-align: center;
+			color: var(--muted);
+			line-height: 1.8;
+		}
+
+		.guide-list {
+			margin: 14px 0 0;
+			padding-left: 20px;
+			color: var(--text-soft);
+			line-height: 1.8;
+		}
+
+		.guide-list li + li {
+			margin-top: 8px;
+		}
+
+		.guide-list li::marker {
+			color: var(--accent-strong);
+		}
+
+		.guide-tip {
+			margin-top: 18px;
+			padding: 18px 20px;
+			border-radius: 22px;
+			border: 1px solid rgba(97, 219, 255, 0.16);
+			background:
+				linear-gradient(90deg, rgba(97, 219, 255, 0.1), rgba(45, 212, 191, 0.08), rgba(255, 184, 105, 0.08)),
+				rgba(255, 255, 255, 0.02);
+			color: #d7edf9;
+			line-height: 1.8;
+		}
+
+		.guide-tip strong {
+			color: #ffffff;
+		}
+
 		.result-item {
 			position: relative;
 			overflow: hidden;
@@ -1104,6 +1333,10 @@ function generateHTML() {
 				max-width: none;
 			}
 
+			.guide-grid {
+				grid-template-columns: 1fr;
+			}
+
 		}
 
 		@media (max-width: 720px) {
@@ -1114,6 +1347,7 @@ function generateHTML() {
 			.site-header,
 			.panel-header,
 			.results-header,
+			.guide-header,
 			.control-row,
 			.results-empty,
 			.result-top {
@@ -1123,13 +1357,15 @@ function generateHTML() {
 			.site-header,
 			.panel-header,
 			.results-header,
+			.guide-header,
 			.control-row {
 				align-items: stretch;
 			}
 
 			.control-panel,
 			.side-card,
-			.results-shell {
+			.results-shell,
+			.guide-shell {
 				padding: 22px;
 			}
 
@@ -1140,6 +1376,15 @@ function generateHTML() {
 			.progress-head {
 				flex-direction: column;
 				align-items: flex-start;
+			}
+
+			.guide-flow {
+				grid-template-columns: 1fr;
+				padding: 20px;
+			}
+
+			.guide-arrow {
+				display: none;
 			}
 		}
 
@@ -1292,6 +1537,71 @@ function generateHTML() {
 				</div>
 
 				<div id="results" class="results-list"></div>
+			</section>
+
+			<section class="surface-card guide-shell">
+				<div class="guide-header">
+					<div>
+						<p class="section-kicker">Guide</p>
+						<h2 class="results-title">什么是 ProxyIP</h2>
+						<p class="results-subtitle">用一段更接近实际部署场景的说明，快速理解 ProxyIP 的定义、作用和筛选标准。</p>
+					</div>
+					<div class="guide-badge">Cloudflare Workers / TCP</div>
+				</div>
+
+				<div class="guide-grid">
+					<article class="guide-card guide-card-accent">
+						<div class="guide-card-label">概念</div>
+						<h3>ProxyIP 是一个可被验证的中转入口</h3>
+						<p>在 Cloudflare Workers 的使用语境里，ProxyIP 通常指那些能够成功代理到 Cloudflare 服务的第三方 IP。它不是 Cloudflare 官方分配给你的接入地址，而是一个可以替你完成转发的外部节点。</p>
+					</article>
+
+					<article class="guide-card guide-card-warm">
+						<div class="guide-card-label">限制来源</div>
+						<h3>为什么很多场景会专门去找 ProxyIP</h3>
+						<p>Cloudflare Workers 的 <a href="https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/" target="_blank" rel="noreferrer">TCP sockets 文档</a> 明确提到，指向 <a href="https://developers.cloudflare.com/fundamentals/concepts/cloudflare-ip-addresses/" target="_blank" rel="noreferrer">Cloudflare IP ranges</a> 的出站 TCP 连接会被阻止。也就是说，某些依赖直连 Cloudflare IP 的链路，不能在 Workers 里直接打通。</p>
+						<div class="guide-quote">Outbound TCP sockets to Cloudflare IP ranges are blocked.</div>
+					</article>
+				</div>
+
+				<div class="guide-flow">
+					<div class="guide-step is-source">
+						<strong>Cloudflare Workers</strong>
+						<span>发起请求，尝试访问目标服务</span>
+					</div>
+					<div class="guide-arrow" aria-hidden="true">→</div>
+					<div class="guide-step is-proxy">
+						<strong>ProxyIP 节点</strong>
+						<span>位于第三方网络，负责中转和反向代理</span>
+					</div>
+					<div class="guide-arrow" aria-hidden="true">→</div>
+					<div class="guide-step is-target">
+						<strong>Cloudflare 服务</strong>
+						<span>最终被访问的站点、边缘服务或 CDN 目标</span>
+					</div>
+					<p class="guide-flow-caption">实际作用可以理解为：让 Workers 先连到第三方节点，再由该节点替你把流量送到 Cloudflare 侧，绕开直连 Cloudflare IP 的限制。</p>
+				</div>
+
+				<div class="guide-grid guide-grid-secondary">
+					<article class="guide-card">
+						<div class="guide-card-label">应用场景</div>
+						<h3>为什么像 edgetunnel、epeius 这类项目会用到它</h3>
+						<p>当目标网站本身走的是 Cloudflare CDN 或 Cloudflare 边缘网络时，项目如果需要直接建立到目标地址的 TCP 连接，就可能因为上述限制而失败。配置可用的 ProxyIP 后，这类项目就能借助中转节点继续完成访问。</p>
+					</article>
+
+					<article class="guide-card">
+						<div class="guide-card-label">有效特征</div>
+						<h3>有效的 ProxyIP，通常至少满足这些条件</h3>
+						<ul class="guide-list">
+							<li>能够成功建立代理到指定端口（通常为 443）的 TCP 连接</li>
+							<li>具备反向代理 Cloudflare IP 段的 HTTPS 服务能力</li>
+						</ul>
+					</article>
+				</div>
+
+				<div class="guide-tip">
+					<strong>这页检测的意义：</strong>本工具不是只做静态解析，而是尽量模拟真实链路去验证目标是否真的可用，帮助你更快筛掉“看起来在线、实际不可做代理”的候选 IP。
+				</div>
 			</section>
 		</main>
 
