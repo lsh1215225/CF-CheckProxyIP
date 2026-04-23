@@ -1160,7 +1160,12 @@ function generateHTML() {
 			}
 
 			.summary-grid {
-				grid-template-columns: 1fr;
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+				gap: 10px;
+			}
+
+			.metric-card {
+				padding: 14px;
 			}
 		}
 	</style>
