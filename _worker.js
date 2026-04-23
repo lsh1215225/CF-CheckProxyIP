@@ -2820,8 +2820,9 @@ function generateHTML() {
 				if (data.success) {
 					successCount++;
 					itemObj.el.className = 'result-item success';
+					const latency = formatLatency(data.responseTime);
 					itemObj.badge.className = 'status-badge status-success';
-					itemObj.badge.innerText = '可用';
+					itemObj.badge.innerText = latency;
 
 					const exitIps = [];
 					if (data.probe_results?.ipv4?.ok && data.probe_results.ipv4.exit) {
@@ -2837,7 +2838,6 @@ function generateHTML() {
 					const networks = joinUniqueValues(exitIps.map(function (entry) {
 						return formatExitNetwork(entry.exitData);
 					}), 'ASN / 运营商未知');
-					const latency = formatLatency(data.responseTime);
 					const flagUrl = getFlagUrlFromExitIps(exitIps);
 
 					updateResultFlag(itemObj, flagUrl);
@@ -2848,7 +2848,6 @@ function generateHTML() {
 						'<span class="result-detail">代理验证通过，可继续查看出口位置、网络信息和地图分布。</span>';
 
 					const metaParts = [
-						'<span class="meta-chip meta-chip-strong">' + escapeHtml(latency) + '</span>',
 						'<span class="meta-chip">' + escapeHtml(locations) + '</span>',
 						'<span class="meta-chip">' + escapeHtml(networks) + '</span>',
 						'<span class="meta-chip">' + escapeHtml(exitIps.length + '个出口') + '</span>'
