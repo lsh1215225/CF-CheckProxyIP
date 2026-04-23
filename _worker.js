@@ -2185,7 +2185,7 @@ function generateHTML() {
 		</main>
 
 		<footer class="site-footer">
-			<div>© 2025 - 2026 Check ProxyIP · 基于 Cloudflare Workers 构建与运行 · 今日访问人数：<span id="visit-count">···</span> · 本站内容仅供技术交流与参考，站点维护：<a href="https://t.me/CMLiussss" target="_blank" rel="noreferrer">CMLiussss</a></div>
+			<div>© 2025 - 2026 Check ProxyIP · 基于 Cloudflare Workers 构建与运行 · 今日访问人数：<span id="visit-count">···</span> · 站点维护：<a href="https://t.me/CMLiussss" target="_blank" rel="noreferrer">CMLiussss</a></div>
 		</footer>
 	</div>
 
