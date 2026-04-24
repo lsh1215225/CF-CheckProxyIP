@@ -315,6 +315,9 @@ function generateHTML() {
 		.metric-card,
 		.results-pill,
 		.results-empty,
+		.results-filters,
+		.filter-chip,
+		.filter-empty,
 		.empty-visual,
 		.guide-card,
 		.guide-flow,
@@ -1008,6 +1011,81 @@ function generateHTML() {
 			border-radius: 24px;
 			border: 1px dashed rgba(144, 180, 212, 0.22);
 			background: rgba(255, 255, 255, 0.025);
+		}
+
+		.results-filters[hidden],
+		.filter-empty[hidden] {
+			display: none;
+		}
+
+		.results-filters {
+			display: grid;
+			gap: 12px;
+			margin-top: 22px;
+			margin-bottom: 18px;
+		}
+
+		.filter-row {
+			display: grid;
+			grid-template-columns: max-content minmax(0, 1fr);
+			gap: 10px;
+			align-items: start;
+		}
+
+		.filter-row-label {
+			color: var(--muted);
+			font-size: 0.84rem;
+			font-weight: 700;
+			letter-spacing: 0.04em;
+			line-height: 40px;
+			white-space: nowrap;
+		}
+
+		.filter-options {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			min-width: 0;
+		}
+
+		.filter-chip {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 40px;
+			padding: 9px 14px;
+			border-radius: 999px;
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			background: rgba(255, 255, 255, 0.04);
+			color: var(--text-soft);
+			font-size: 0.86rem;
+			font-weight: 700;
+			white-space: nowrap;
+			cursor: pointer;
+		}
+
+		.filter-chip:hover {
+			border-color: rgba(97, 219, 255, 0.28);
+			background: rgba(97, 219, 255, 0.1);
+			color: #ffffff;
+		}
+
+		.filter-chip.is-active {
+			border-color: rgba(97, 219, 255, 0.46);
+			background: linear-gradient(135deg, rgba(97, 219, 255, 0.22), rgba(52, 211, 153, 0.14));
+			color: #ffffff;
+			box-shadow: inset 0 0 0 1px rgba(97, 219, 255, 0.12);
+		}
+
+		.filter-empty {
+			padding: 16px 18px;
+			margin-bottom: 18px;
+			border-radius: 18px;
+			border: 1px dashed rgba(144, 180, 212, 0.22);
+			background: rgba(255, 255, 255, 0.025);
+			color: var(--muted);
+			font-size: 0.92rem;
+			line-height: 1.7;
 		}
 
 		.empty-visual {
@@ -1716,6 +1794,31 @@ function generateHTML() {
 			color: #be123c;
 		}
 
+		html[data-theme='light'] .filter-chip {
+			border-color: rgba(95, 123, 150, 0.14);
+			background: rgba(255, 255, 255, 0.66);
+			color: #365168;
+		}
+
+		html[data-theme='light'] .filter-chip:hover {
+			border-color: rgba(14, 165, 233, 0.24);
+			background: rgba(14, 165, 233, 0.08);
+			color: #10253d;
+		}
+
+		html[data-theme='light'] .filter-chip.is-active {
+			border-color: rgba(14, 165, 233, 0.32);
+			background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(5, 150, 105, 0.1));
+			color: #0f5f8e;
+			box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.08);
+		}
+
+		html[data-theme='light'] .filter-empty {
+			border-color: rgba(95, 123, 150, 0.16);
+			background: rgba(255, 255, 255, 0.58);
+			color: #5b738b;
+		}
+
 		html[data-theme='light'] .empty-visual {
 			background:
 				radial-gradient(circle at 30% 30%, rgba(14, 165, 233, 0.18), transparent 42%),
@@ -1975,6 +2078,15 @@ function generateHTML() {
 				justify-content: center;
 			}
 
+			.filter-row-label,
+			.filter-options {
+				width: 100%;
+			}
+
+			.filter-chip {
+				flex: 1 1 128px;
+			}
+
 			.results-empty {
 				grid-template-columns: 1fr;
 				text-align: center;
@@ -2137,6 +2249,17 @@ function generateHTML() {
 					</div>
 				</div>
 
+				<div class="results-filters" id="resultsFilters" hidden>
+					<div class="filter-row">
+						<span class="filter-row-label">筛选</span>
+						<div class="filter-options" id="primaryFilterGroup" aria-label="结果类型筛选"></div>
+					</div>
+					<div class="filter-row">
+						<span class="filter-row-label">地区</span>
+						<div class="filter-options" id="countryFilterGroup" aria-label="出口地区筛选"></div>
+					</div>
+				</div>
+				<div class="filter-empty" id="filterEmpty" hidden>当前筛选没有匹配的检测结果。</div>
 				<div id="results" class="results-list"></div>
 			</section>
 
@@ -2240,6 +2363,10 @@ function generateHTML() {
 		const resultsEmpty = document.getElementById('resultsEmpty');
 		const emptyStateTitle = document.getElementById('emptyStateTitle');
 		const emptyStateDescription = document.getElementById('emptyStateDescription');
+		const resultsFilters = document.getElementById('resultsFilters');
+		const primaryFilterGroup = document.getElementById('primaryFilterGroup');
+		const countryFilterGroup = document.getElementById('countryFilterGroup');
+		const filterEmpty = document.getElementById('filterEmpty');
 		const themeToggle = document.getElementById('themeToggle');
 		const THEME_STORAGE_KEY = 'cf_proxy_theme';
 		const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -2261,6 +2388,17 @@ function generateHTML() {
 		let inputCount = 0;
 		let appState = 'idle';
 		const CHECK_CONCURRENCY = 32;
+		const PRIMARY_RESULT_FILTERS = [
+			{ key: 'all', label: '全部' },
+			{ key: 'success', label: '有效' },
+			{ key: 'failed', label: '失败' },
+			{ key: 'ipv4', label: 'IPv4出口' },
+			{ key: 'ipv6', label: 'IPv6出口' }
+		];
+		let resultRecords = [];
+		let activePrimaryFilter = 'all';
+		let activeCountryFilter = 'all';
+		let isCreatingResultBatch = false;
 
 		function getStoredTheme() {
 			try {
@@ -2950,6 +3088,208 @@ function generateHTML() {
 			renderDashboard();
 		}
 
+		function resetResultFilters() {
+			resultRecords = [];
+			activePrimaryFilter = 'all';
+			activeCountryFilter = 'all';
+			updateResultFilters();
+		}
+
+		function createResultRecord(target, itemObj) {
+			const record = {
+				target: target,
+				el: itemObj.el,
+				status: 'pending',
+				supportsIpv4: false,
+				supportsIpv6: false,
+				ipv4Countries: [],
+				ipv6Countries: [],
+				countries: []
+			};
+			resultRecords.push(record);
+			itemObj.record = record;
+			if (!isCreatingResultBatch) {
+				updateResultFilters();
+			}
+			return record;
+		}
+
+		function getBooleanSupport(data, fieldName, probeName) {
+			if (typeof data?.[fieldName] === 'boolean') {
+				return data[fieldName] === true;
+			}
+
+			return Boolean(data?.probe_results?.[probeName]?.ok && data.probe_results[probeName].exit);
+		}
+
+		function normalizeCountryFilterKey(value) {
+			const text = String(value || '').trim();
+			if (!text) return '';
+			return /^[a-z]{2}$/i.test(text) ? text.toUpperCase() : text;
+		}
+
+		function getExitCountryFilterKey(exitData) {
+			const candidates = [
+				exitData?.country,
+				exitData?.countryCode,
+				exitData?.country_code,
+				exitData?.countryIsoCode,
+				exitData?.country_iso_code
+			];
+
+			for (const candidate of candidates) {
+				const normalized = normalizeCountryFilterKey(candidate);
+				if (/^[A-Z]{2}$/.test(normalized)) {
+					return normalized;
+				}
+			}
+
+			for (const candidate of candidates) {
+				const normalized = normalizeCountryFilterKey(candidate);
+				if (normalized) {
+					return normalized;
+				}
+			}
+
+			return '';
+		}
+
+		function getCountryFilterKeys(exitIps, stackName) {
+			const countries = [];
+			exitIps.forEach(function (entry) {
+				if (stackName && entry.stack !== stackName) return;
+				const country = getExitCountryFilterKey(entry.exitData);
+				if (country && !countries.includes(country)) {
+					countries.push(country);
+				}
+			});
+			return countries;
+		}
+
+		function updateResultRecordAsSuccess(record, data, exitIps) {
+			if (!record) return;
+			record.status = 'success';
+			record.supportsIpv4 = getBooleanSupport(data, 'supports_ipv4', 'ipv4');
+			record.supportsIpv6 = getBooleanSupport(data, 'supports_ipv6', 'ipv6');
+			record.ipv4Countries = getCountryFilterKeys(exitIps, 'ipv4');
+			record.ipv6Countries = getCountryFilterKeys(exitIps, 'ipv6');
+			record.countries = getCountryFilterKeys(exitIps);
+		}
+
+		function updateResultRecordAsError(record) {
+			if (!record) return;
+			record.status = 'error';
+			record.supportsIpv4 = false;
+			record.supportsIpv6 = false;
+			record.ipv4Countries = [];
+			record.ipv6Countries = [];
+			record.countries = [];
+		}
+
+		function doesRecordMatchPrimaryFilter(record, filterKey) {
+			if (filterKey === 'success') {
+				return record.status === 'success';
+			}
+			if (filterKey === 'failed') {
+				return record.status === 'error';
+			}
+			if (filterKey === 'ipv4') {
+				return record.supportsIpv4 === true;
+			}
+			if (filterKey === 'ipv6') {
+				return record.supportsIpv6 === true;
+			}
+			return true;
+		}
+
+		function getRecordCountryKeys(record, filterKey) {
+			if (filterKey === 'ipv4') {
+				return record.ipv4Countries;
+			}
+			if (filterKey === 'ipv6') {
+				return record.ipv6Countries;
+			}
+			return record.countries;
+		}
+
+		function doesRecordMatchCountryFilter(record, countryKey, filterKey) {
+			return countryKey === 'all' || getRecordCountryKeys(record, filterKey).includes(countryKey);
+		}
+
+		function getPrimaryFilteredRecords(filterKey) {
+			return resultRecords.filter(function (record) {
+				return doesRecordMatchPrimaryFilter(record, filterKey);
+			});
+		}
+
+		function getCountryFilterOptions(baseRecords, filterKey) {
+			const countryCounts = new Map();
+			baseRecords.forEach(function (record) {
+				getRecordCountryKeys(record, filterKey).forEach(function (country) {
+					countryCounts.set(country, (countryCounts.get(country) || 0) + 1);
+				});
+			});
+
+			const options = [{ key: 'all', label: '全部', count: baseRecords.length }];
+			Array.from(countryCounts.entries())
+				.sort(function (left, right) {
+					return right[1] - left[1] || left[0].localeCompare(right[0]);
+				})
+				.forEach(function (entry) {
+					options.push({ key: entry[0], label: entry[0], count: entry[1] });
+				});
+			return options;
+		}
+
+		function renderFilterChip(attributeName, key, label, count, isActive) {
+			const className = isActive ? 'filter-chip is-active' : 'filter-chip';
+			return '<button type="button" class="' + className + '" data-' + attributeName + '="' + escapeHtml(key) + '" aria-pressed="' + String(isActive) + '">'
+				+ escapeHtml(label + '(' + count + ')')
+				+ '</button>';
+		}
+
+		function applyResultFilters() {
+			let visibleCount = 0;
+			resultRecords.forEach(function (record) {
+				const shouldShow = doesRecordMatchPrimaryFilter(record, activePrimaryFilter)
+					&& doesRecordMatchCountryFilter(record, activeCountryFilter, activePrimaryFilter);
+				record.el.hidden = !shouldShow;
+				if (shouldShow) {
+					visibleCount++;
+				}
+			});
+			return visibleCount;
+		}
+
+		function updateResultFilters() {
+			if (!resultsFilters || !primaryFilterGroup || !countryFilterGroup || !filterEmpty) return;
+
+			if (!resultRecords.length) {
+				resultsFilters.hidden = true;
+				filterEmpty.hidden = true;
+				return;
+			}
+
+			resultsFilters.hidden = false;
+			primaryFilterGroup.innerHTML = PRIMARY_RESULT_FILTERS.map(function (filter) {
+				const count = getPrimaryFilteredRecords(filter.key).length;
+				return renderFilterChip('primary-filter', filter.key, filter.label, count, activePrimaryFilter === filter.key);
+			}).join('');
+
+			const baseRecords = getPrimaryFilteredRecords(activePrimaryFilter);
+			const countryOptions = getCountryFilterOptions(baseRecords, activePrimaryFilter);
+			if (activeCountryFilter !== 'all' && !countryOptions.some(function (option) { return option.key === activeCountryFilter; })) {
+				activeCountryFilter = 'all';
+			}
+
+			countryFilterGroup.innerHTML = countryOptions.map(function (option) {
+				return renderFilterChip('country-filter', option.key, option.label, option.count, activeCountryFilter === option.key);
+			}).join('');
+
+			const visibleCount = applyResultFilters();
+			filterEmpty.hidden = visibleCount !== 0;
+		}
+
 		function getHistory() {
 			try {
 				const parsed = JSON.parse(localStorage.getItem('cf_proxy_history') || '[]');
@@ -3176,7 +3516,7 @@ function generateHTML() {
 
 			resultsDiv.appendChild(div);
 
-			return {
+			const itemObj = {
 				el: div,
 				flag: div.querySelector('.result-flag-overlay'),
 				info: div.querySelector('.result-info'),
@@ -3185,10 +3525,13 @@ function generateHTML() {
 				exitList: div.querySelector('.exit-list'),
 				mapContainer: div.querySelector('.map-container-wrapper')
 			};
+			createResultRecord(ip, itemObj);
+			return itemObj;
 		}
 
-		async function checkIP(target) {
-			const itemObj = addResultItem(target);
+		async function checkIP(target, itemObj) {
+			itemObj = itemObj || addResultItem(target);
+			const resultRecord = itemObj.record;
 
 			try {
 				const response = await fetch('https://api.090227.xyz/check?proxyip=' + encodeURIComponent(target));
@@ -3204,11 +3547,12 @@ function generateHTML() {
 
 					const exitIps = [];
 					if (data.probe_results?.ipv4?.ok && data.probe_results.ipv4.exit) {
-						exitIps.push({ ip: data.probe_results.ipv4.exit.ip, exitData: data.probe_results.ipv4.exit });
+						exitIps.push({ stack: 'ipv4', ip: data.probe_results.ipv4.exit.ip, exitData: data.probe_results.ipv4.exit });
 					}
 					if (data.probe_results?.ipv6?.ok && data.probe_results.ipv6.exit) {
-						exitIps.push({ ip: data.probe_results.ipv6.exit.ip, exitData: data.probe_results.ipv6.exit });
+						exitIps.push({ stack: 'ipv6', ip: data.probe_results.ipv6.exit.ip, exitData: data.probe_results.ipv6.exit });
 					}
+					updateResultRecordAsSuccess(resultRecord, data, exitIps);
 
 					const locations = joinUniqueValues(exitIps.map(function (entry) {
 						return formatExitLocation(entry.exitData);
@@ -3234,6 +3578,7 @@ function generateHTML() {
 
 					renderExitList(itemObj.exitList, exitIps);
 				} else {
+					updateResultRecordAsError(resultRecord);
 					itemObj.el.className = 'result-item error';
 					updateResultFlag(itemObj, '');
 					itemObj.badge.className = 'status-badge status-error';
@@ -3249,6 +3594,7 @@ function generateHTML() {
 				}
 			} catch (error) {
 				completedCount++;
+				updateResultRecordAsError(resultRecord);
 				itemObj.el.className = 'result-item error';
 				updateResultFlag(itemObj, '');
 				itemObj.badge.className = 'status-badge status-error';
@@ -3264,6 +3610,7 @@ function generateHTML() {
 			}
 
 			updateProgress();
+			updateResultFilters();
 		}
 
 		async function showDetails(button, exitData) {
@@ -3412,6 +3759,23 @@ function generateHTML() {
 			});
 		}
 
+		primaryFilterGroup.addEventListener('click', function (event) {
+			const button = event.target.closest('[data-primary-filter]');
+			if (!button) return;
+
+			activePrimaryFilter = button.dataset.primaryFilter || 'all';
+			activeCountryFilter = 'all';
+			updateResultFilters();
+		});
+
+		countryFilterGroup.addEventListener('click', function (event) {
+			const button = event.target.closest('[data-country-filter]');
+			if (!button) return;
+
+			activeCountryFilter = button.dataset.countryFilter || 'all';
+			updateResultFilters();
+		});
+
 		checkBtn.addEventListener('click', async function () {
 			const value = batchMode.checked ? normalizeBatchInputValue(inputList.value) : stripTargetLabel(inputList.value);
 			if (!value) return;
@@ -3427,6 +3791,7 @@ function generateHTML() {
 			}
 
 			resultsDiv.innerHTML = '';
+			resetResultFilters();
 			progressBar.style.width = '0%';
 			progressText.innerText = '正在解析目标...';
 			showEmptyState('正在准备检测', '正在解析你输入的目标，请稍候。');
@@ -3472,8 +3837,22 @@ function generateHTML() {
 					setAppState('running');
 					updateProgress();
 
-					await runWithConcurrency(allResolvedTargets, CHECK_CONCURRENCY, function (target) {
-						return checkIP(target);
+					let checkJobs = [];
+					isCreatingResultBatch = true;
+					try {
+						checkJobs = allResolvedTargets.map(function (target) {
+							return {
+								target: target,
+								itemObj: addResultItem(target)
+							};
+						});
+					} finally {
+						isCreatingResultBatch = false;
+					}
+					updateResultFilters();
+
+					await runWithConcurrency(checkJobs, CHECK_CONCURRENCY, function (job) {
+						return checkIP(job.target, job.itemObj);
 					});
 
 					const failCount = Math.max(totalTargets - successCount, 0);
@@ -3499,6 +3878,7 @@ function generateHTML() {
 			setModeVisuals(false);
 			bindInputShortcut();
 			renderDashboard();
+			updateResultFilters();
 			loadCfLocations();
 			fetchVisitCount();
 
