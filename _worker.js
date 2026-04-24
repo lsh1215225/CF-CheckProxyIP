@@ -1132,13 +1132,26 @@ function generateHTML() {
 		}
 
 		.export-chip {
-			border-color: rgba(52, 211, 153, 0.2);
-			background: linear-gradient(135deg, rgba(52, 211, 153, 0.12), rgba(97, 219, 255, 0.08));
+			border-color: rgba(251, 191, 36, 0.28);
+			background: linear-gradient(135deg, rgba(251, 191, 36, 0.18), rgba(255, 184, 105, 0.12));
+			color: #ffe7a7;
 		}
 
 		.export-chip:hover {
-			border-color: rgba(52, 211, 153, 0.38);
-			background: linear-gradient(135deg, rgba(52, 211, 153, 0.18), rgba(97, 219, 255, 0.12));
+			border-color: rgba(251, 191, 36, 0.48);
+			background: linear-gradient(135deg, rgba(251, 191, 36, 0.26), rgba(255, 184, 105, 0.18));
+			color: #fff4cf;
+		}
+
+		.filter-chip:disabled,
+		.filter-chip.is-disabled {
+			border-color: rgba(144, 180, 212, 0.1);
+			background: rgba(255, 255, 255, 0.025);
+			color: rgba(142, 166, 188, 0.46);
+			box-shadow: none;
+			cursor: not-allowed;
+			opacity: 0.72;
+			pointer-events: none;
 		}
 
 		.export-toast {
@@ -1984,13 +1997,23 @@ function generateHTML() {
 		}
 
 		html[data-theme='light'] .export-chip {
-			border-color: rgba(5, 150, 105, 0.18);
-			background: linear-gradient(135deg, rgba(5, 150, 105, 0.1), rgba(14, 165, 233, 0.08));
+			border-color: rgba(245, 158, 11, 0.22);
+			background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(251, 191, 36, 0.12));
+			color: #9a6706;
 		}
 
 		html[data-theme='light'] .export-chip:hover {
-			border-color: rgba(5, 150, 105, 0.28);
-			background: linear-gradient(135deg, rgba(5, 150, 105, 0.14), rgba(14, 165, 233, 0.1));
+			border-color: rgba(245, 158, 11, 0.34);
+			background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(251, 191, 36, 0.16));
+			color: #7c4a03;
+		}
+
+		html[data-theme='light'] .filter-chip:disabled,
+		html[data-theme='light'] .filter-chip.is-disabled {
+			border-color: rgba(95, 123, 150, 0.1);
+			background: rgba(255, 255, 255, 0.36);
+			color: rgba(91, 115, 139, 0.46);
+			box-shadow: none;
 		}
 
 		html[data-theme='light'] .export-toast {
@@ -3501,9 +3524,12 @@ function generateHTML() {
 			return options;
 		}
 
-		function renderFilterChip(attributeName, key, label, count, isActive) {
-			const className = isActive ? 'filter-chip is-active' : 'filter-chip';
-			return '<button type="button" class="' + className + '" data-' + attributeName + '="' + escapeHtml(key) + '" aria-pressed="' + String(isActive) + '">'
+		function renderFilterChip(attributeName, key, label, count, isActive, isDisabled) {
+			const className = 'filter-chip'
+				+ (isActive ? ' is-active' : '')
+				+ (isDisabled ? ' is-disabled' : '');
+			const disabledAttribute = isDisabled ? ' disabled aria-disabled="true"' : '';
+			return '<button type="button" class="' + className + '" data-' + attributeName + '="' + escapeHtml(key) + '" aria-pressed="' + String(isActive) + '"' + disabledAttribute + '>'
 				+ escapeHtml(label + '(' + count + ')')
 				+ '</button>';
 		}
@@ -3566,7 +3592,7 @@ function generateHTML() {
 			resultsFilters.hidden = false;
 			primaryFilterGroup.innerHTML = PRIMARY_RESULT_FILTERS.map(function (filter) {
 				const count = getPrimaryFilteredRecords(filter.key).length;
-				return renderFilterChip('primary-filter', filter.key, filter.label, count, activePrimaryFilter === filter.key);
+				return renderFilterChip('primary-filter', filter.key, filter.label, count, activePrimaryFilter === filter.key, count === 0);
 			}).join('');
 
 			const baseRecords = getPrimaryFilteredRecords(activePrimaryFilter);
@@ -4296,7 +4322,7 @@ function generateHTML() {
 
 		primaryFilterGroup.addEventListener('click', function (event) {
 			const button = event.target.closest('[data-primary-filter]');
-			if (!button) return;
+			if (!button || button.disabled) return;
 
 			activePrimaryFilter = button.dataset.primaryFilter || 'all';
 			activeCountryFilter = 'all';
