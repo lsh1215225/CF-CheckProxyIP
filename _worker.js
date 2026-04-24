@@ -2458,8 +2458,9 @@ function generateHTML() {
 			{ key: 'all', label: '全部' },
 			{ key: 'success', label: '有效' },
 			{ key: 'failed', label: '失败' },
-			{ key: 'ipv4', label: 'IPv4出口' },
-			{ key: 'ipv6', label: 'IPv6出口' }
+			{ key: 'only_ipv4', label: 'OnlyIPv4' },
+			{ key: 'only_ipv6', label: 'OnlyIPv6' },
+			{ key: 'dual_stack', label: 'IPv4&IPv6' }
 		];
 		let resultRecords = [];
 		let activePrimaryFilter = 'all';
@@ -3261,20 +3262,23 @@ function generateHTML() {
 			if (filterKey === 'failed') {
 				return record.status === 'error';
 			}
-			if (filterKey === 'ipv4') {
-				return record.supportsIpv4 === true;
+			if (filterKey === 'only_ipv4') {
+				return record.supportsIpv4 === true && record.supportsIpv6 === false;
 			}
-			if (filterKey === 'ipv6') {
-				return record.supportsIpv6 === true;
+			if (filterKey === 'only_ipv6') {
+				return record.supportsIpv4 === false && record.supportsIpv6 === true;
+			}
+			if (filterKey === 'dual_stack') {
+				return record.supportsIpv4 === true && record.supportsIpv6 === true;
 			}
 			return true;
 		}
 
 		function getRecordCountryKeys(record, filterKey) {
-			if (filterKey === 'ipv4') {
+			if (filterKey === 'only_ipv4') {
 				return record.ipv4Countries;
 			}
-			if (filterKey === 'ipv6') {
+			if (filterKey === 'only_ipv6') {
 				return record.ipv6Countries;
 			}
 			return record.countries;
