@@ -1506,6 +1506,7 @@ function generateHTML() {
 		}
 
 		.status-badge {
+			position: relative;
 			display: inline-flex;
 			align-items: center;
 			justify-content: center;
@@ -1518,6 +1519,68 @@ function generateHTML() {
 			font-weight: 700;
 			color: #eef8ff;
 			white-space: nowrap;
+		}
+
+		.status-badge[data-tooltip]::before,
+		.status-badge[data-tooltip]::after {
+			position: absolute;
+			right: 0;
+			opacity: 0;
+			pointer-events: none;
+			transform: translateY(-4px);
+			transition: opacity 0.18s ease, transform 0.18s ease;
+			z-index: 20;
+		}
+
+		.status-badge[data-tooltip] {
+			cursor: help;
+		}
+
+		.status-badge[data-tooltip]::before {
+			content: '';
+			top: calc(100% + 6px);
+			width: 10px;
+			height: 10px;
+			margin-right: 18px;
+			background: rgba(5, 18, 32, 0.96);
+			border-left: 1px solid rgba(255, 255, 255, 0.12);
+			border-top: 1px solid rgba(255, 255, 255, 0.12);
+			transform: translateY(-4px) rotate(45deg);
+		}
+
+		.status-badge[data-tooltip]::after {
+			content: attr(data-tooltip);
+			top: calc(100% + 10px);
+			width: max-content;
+			max-width: min(320px, calc(100vw - 44px));
+			padding: 10px 12px;
+			border-radius: 14px;
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			background: rgba(5, 18, 32, 0.96);
+			box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+			color: #edf7ff;
+			font-size: 0.78rem;
+			font-weight: 600;
+			line-height: 1.55;
+			text-align: left;
+			white-space: normal;
+		}
+
+		.status-badge[data-tooltip]:hover::before,
+		.status-badge[data-tooltip]:hover::after,
+		.status-badge[data-tooltip]:focus-visible::before,
+		.status-badge[data-tooltip]:focus-visible::after {
+			opacity: 1;
+		}
+
+		.status-badge[data-tooltip]:hover::before,
+		.status-badge[data-tooltip]:focus-visible::before {
+			transform: translateY(0) rotate(45deg);
+		}
+
+		.status-badge[data-tooltip]:hover::after,
+		.status-badge[data-tooltip]:focus-visible::after {
+			transform: translateY(0);
 		}
 
 		.status-success {
@@ -1987,6 +2050,13 @@ function generateHTML() {
 			border-color: rgba(95, 123, 150, 0.14);
 			background: rgba(255, 255, 255, 0.72);
 			color: #16324a;
+		}
+
+		html[data-theme='light'] .status-badge[data-tooltip]::before,
+		html[data-theme='light'] .status-badge[data-tooltip]::after {
+			background: rgba(16, 37, 61, 0.96);
+			border-color: rgba(255, 255, 255, 0.18);
+			color: #f7fbff;
 		}
 
 		html[data-theme='light'] .status-success {
@@ -3493,6 +3563,19 @@ function generateHTML() {
 			return text.includes('ms') ? text : text + ' ms';
 		}
 
+		function getLatencyTooltipText(data) {
+			const coloCode = normalizeColoCode(data?.colo);
+			const coloText = coloCode ? 'Cloudflare ' + coloCode + ' 机房' : 'Cloudflare 测试机房';
+			return '这个延迟不是你到 ProxyIP 的延迟，而是 ' + coloText + ' 到 ProxyIP 的检测延迟。';
+		}
+
+		function setLatencyTooltip(badge, data, latencyText) {
+			if (!badge) return;
+			const tooltipText = getLatencyTooltipText(data);
+			badge.dataset.tooltip = tooltipText;
+			badge.setAttribute('aria-label', latencyText + '。' + tooltipText);
+		}
+
 		function joinUniqueValues(values, fallback) {
 			const uniqueValues = Array.from(new Set(values.filter(Boolean)));
 			return uniqueValues.length ? uniqueValues.join(' / ') : fallback;
@@ -3650,6 +3733,7 @@ function generateHTML() {
 					const latency = formatLatency(data.responseTime);
 					itemObj.badge.className = 'status-badge status-success';
 					itemObj.badge.innerText = latency;
+					setLatencyTooltip(itemObj.badge, data, latency);
 
 					const exitIps = [];
 					if (data.probe_results?.ipv4?.ok && data.probe_results.ipv4.exit) {
