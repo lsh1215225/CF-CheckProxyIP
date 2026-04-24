@@ -1017,6 +1017,7 @@ function generateHTML() {
 
 		.results-filters[hidden],
 		.filter-panel[hidden],
+		.export-toast[hidden],
 		.filter-empty[hidden] {
 			display: none;
 		}
@@ -1128,6 +1129,47 @@ function generateHTML() {
 			background: linear-gradient(135deg, rgba(97, 219, 255, 0.22), rgba(52, 211, 153, 0.14));
 			color: #ffffff;
 			box-shadow: inset 0 0 0 1px rgba(97, 219, 255, 0.12);
+		}
+
+		.export-chip {
+			border-color: rgba(52, 211, 153, 0.2);
+			background: linear-gradient(135deg, rgba(52, 211, 153, 0.12), rgba(97, 219, 255, 0.08));
+		}
+
+		.export-chip:hover {
+			border-color: rgba(52, 211, 153, 0.38);
+			background: linear-gradient(135deg, rgba(52, 211, 153, 0.18), rgba(97, 219, 255, 0.12));
+		}
+
+		.export-toast {
+			position: fixed;
+			left: 50%;
+			bottom: 28px;
+			z-index: 10000;
+			max-width: min(420px, calc(100vw - 32px));
+			padding: 12px 16px;
+			border-radius: 999px;
+			border: 1px solid rgba(97, 219, 255, 0.26);
+			background: rgba(5, 18, 32, 0.94);
+			box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+			color: #e8fbff;
+			font-size: 0.9rem;
+			font-weight: 800;
+			text-align: center;
+			transform: translate(-50%, 12px);
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 0.22s ease, transform 0.22s ease;
+		}
+
+		.export-toast.is-visible {
+			opacity: 1;
+			transform: translate(-50%, 0);
+		}
+
+		.export-toast.is-error {
+			border-color: rgba(251, 113, 133, 0.34);
+			color: #ffd1d8;
 		}
 
 		.filter-empty {
@@ -1941,6 +1983,28 @@ function generateHTML() {
 			box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.08);
 		}
 
+		html[data-theme='light'] .export-chip {
+			border-color: rgba(5, 150, 105, 0.18);
+			background: linear-gradient(135deg, rgba(5, 150, 105, 0.1), rgba(14, 165, 233, 0.08));
+		}
+
+		html[data-theme='light'] .export-chip:hover {
+			border-color: rgba(5, 150, 105, 0.28);
+			background: linear-gradient(135deg, rgba(5, 150, 105, 0.14), rgba(14, 165, 233, 0.1));
+		}
+
+		html[data-theme='light'] .export-toast {
+			border-color: rgba(14, 165, 233, 0.2);
+			background: rgba(255, 255, 255, 0.94);
+			box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
+			color: #075985;
+		}
+
+		html[data-theme='light'] .export-toast.is-error {
+			border-color: rgba(225, 29, 72, 0.2);
+			color: #be123c;
+		}
+
 		html[data-theme='light'] .filter-empty {
 			border-color: rgba(95, 123, 150, 0.16);
 			background: rgba(255, 255, 255, 0.58);
@@ -2395,14 +2459,22 @@ function generateHTML() {
 					</button>
 					<div class="filter-panel" id="filterPanel" hidden>
 						<div class="filter-row">
-						<span class="filter-row-label">筛选</span>
-						<div class="filter-options" id="primaryFilterGroup" aria-label="结果类型筛选"></div>
+							<span class="filter-row-label">筛选</span>
+							<div class="filter-options" id="primaryFilterGroup" aria-label="结果类型筛选"></div>
+						</div>
+						<div class="filter-row">
+							<span class="filter-row-label">地区</span>
+							<div class="filter-options" id="countryFilterGroup" aria-label="出口地区筛选"></div>
+						</div>
+						<div class="filter-row">
+							<span class="filter-row-label">导出</span>
+							<div class="filter-options export-options" id="exportGroup" aria-label="导出当前筛选结果">
+								<button class="filter-chip export-chip" type="button" data-export-format="clipboard">粘贴板</button>
+								<button class="filter-chip export-chip" type="button" data-export-format="txt">TXT文件</button>
+								<button class="filter-chip export-chip" type="button" data-export-format="csv">CSV文件</button>
+							</div>
+						</div>
 					</div>
-					<div class="filter-row">
-						<span class="filter-row-label">地区</span>
-						<div class="filter-options" id="countryFilterGroup" aria-label="出口地区筛选"></div>
-					</div>
-				</div>
 				</div>
 				<div class="filter-empty" id="filterEmpty" hidden>当前筛选没有匹配的检测结果。</div>
 				<div id="results" class="results-list"></div>
@@ -2514,6 +2586,7 @@ function generateHTML() {
 		const filterToggleText = document.getElementById('filterToggleText');
 		const primaryFilterGroup = document.getElementById('primaryFilterGroup');
 		const countryFilterGroup = document.getElementById('countryFilterGroup');
+		const exportGroup = document.getElementById('exportGroup');
 		const filterEmpty = document.getElementById('filterEmpty');
 		const themeToggle = document.getElementById('themeToggle');
 		const THEME_STORAGE_KEY = 'cf_proxy_theme';
@@ -2544,11 +2617,38 @@ function generateHTML() {
 			{ key: 'only_ipv6', label: 'OnlyIPv6' },
 			{ key: 'dual_stack', label: 'IPv4&IPv6' }
 		];
+		const EXPORT_CSV_COLUMNS = [
+			{ header: 'IP', path: 'proxyIP' },
+			{ header: 'PORT', path: 'portRemote' },
+			{ header: 'IPV4_CONNECT_MS', path: 'probe_results.ipv4.connect_ms' },
+			{ header: 'IPV4_EXIT_IP', path: 'probe_results.ipv4.exit.ip' },
+			{ header: 'IPV4_EXIT_COLO', path: 'probe_results.ipv4.exit.colo' },
+			{ header: 'IPV4_EXIT_ASN', path: 'probe_results.ipv4.exit.asn' },
+			{ header: 'IPV4_EXIT_ORG', path: 'probe_results.ipv4.exit.asOrganization' },
+			{ header: 'IPV4_EXIT_CONTINENT', path: 'probe_results.ipv4.exit.continent' },
+			{ header: 'IPV4_EXIT_COUNTRY', path: 'probe_results.ipv4.exit.country' },
+			{ header: 'IPV4_EXIT_REGION', path: 'probe_results.ipv4.exit.region' },
+			{ header: 'IPV4_EXIT_CITY', path: 'probe_results.ipv4.exit.city' },
+			{ header: 'IPV4_EXIT_LONGITUDE', path: 'probe_results.ipv4.exit.longitude' },
+			{ header: 'IPV4_EXIT_LATITUDE', path: 'probe_results.ipv4.exit.latitude' },
+			{ header: 'IPV6_CONNECT_MS', path: 'probe_results.ipv6.connect_ms' },
+			{ header: 'IPV6_EXIT_IP', path: 'probe_results.ipv6.exit.ip' },
+			{ header: 'IPV6_EXIT_COLO', path: 'probe_results.ipv6.exit.colo' },
+			{ header: 'IPV6_EXIT_ASN', path: 'probe_results.ipv6.exit.asn' },
+			{ header: 'IPV6_EXIT_ORG', path: 'probe_results.ipv6.exit.asOrganization' },
+			{ header: 'IPV6_EXIT_CONTINENT', path: 'probe_results.ipv6.exit.continent' },
+			{ header: 'IPV6_EXIT_COUNTRY', path: 'probe_results.ipv6.exit.country' },
+			{ header: 'IPV6_EXIT_REGION', path: 'probe_results.ipv6.exit.region' },
+			{ header: 'IPV6_EXIT_CITY', path: 'probe_results.ipv6.exit.city' },
+			{ header: 'IPV6_EXIT_LONGITUDE', path: 'probe_results.ipv6.exit.longitude' },
+			{ header: 'IPV6_EXIT_LATITUDE', path: 'probe_results.ipv6.exit.latitude' }
+		];
 		let resultRecords = [];
 		let activePrimaryFilter = 'all';
 		let activeCountryFilter = 'all';
 		let isFilterPanelExpanded = false;
 		let isCreatingResultBatch = false;
+		let exportToastTimer = null;
 
 		function getStoredTheme() {
 			try {
@@ -3255,7 +3355,9 @@ function generateHTML() {
 				supportsIpv6: false,
 				ipv4Countries: [],
 				ipv6Countries: [],
-				countries: []
+				countries: [],
+				data: null,
+				exitIps: []
 			};
 			resultRecords.push(record);
 			itemObj.record = record;
@@ -3325,9 +3427,11 @@ function generateHTML() {
 			record.ipv4Countries = getCountryFilterKeys(exitIps, 'ipv4');
 			record.ipv6Countries = getCountryFilterKeys(exitIps, 'ipv6');
 			record.countries = getCountryFilterKeys(exitIps);
+			record.data = data || null;
+			record.exitIps = Array.isArray(exitIps) ? exitIps : [];
 		}
 
-		function updateResultRecordAsError(record) {
+		function updateResultRecordAsError(record, data) {
 			if (!record) return;
 			record.status = 'error';
 			record.supportsIpv4 = false;
@@ -3335,6 +3439,8 @@ function generateHTML() {
 			record.ipv4Countries = [];
 			record.ipv6Countries = [];
 			record.countries = [];
+			record.data = data || null;
+			record.exitIps = [];
 		}
 
 		function doesRecordMatchPrimaryFilter(record, filterKey) {
@@ -3476,6 +3582,228 @@ function generateHTML() {
 			const visibleCount = applyResultFilters();
 			updateFilterPanelState(visibleCount);
 			filterEmpty.hidden = visibleCount !== 0;
+		}
+
+		function getCurrentFilteredRecords() {
+			return resultRecords.filter(function (record) {
+				return doesRecordMatchPrimaryFilter(record, activePrimaryFilter)
+					&& doesRecordMatchCountryFilter(record, activeCountryFilter, activePrimaryFilter);
+			});
+		}
+
+		function getExportableRecords() {
+			return getCurrentFilteredRecords().filter(function (record) {
+				return record.status === 'success' && Boolean(record.data);
+			});
+		}
+
+		function normalizeExportValue(value) {
+			if (value === undefined || value === null) {
+				return '';
+			}
+			return String(value).trim();
+		}
+
+		function getNestedExportValue(source, path) {
+			const parts = path.split('.');
+			let current = source;
+			for (const part of parts) {
+				if (current === undefined || current === null || !Object.prototype.hasOwnProperty.call(current, part)) {
+					return '';
+				}
+				current = current[part];
+			}
+			return normalizeExportValue(current);
+		}
+
+		function getProbeForTextExport(data, stackName) {
+			const probe = data?.probe_results?.[stackName];
+			return probe?.ok && probe.exit ? probe : null;
+		}
+
+		function getTextExportProbeCandidates(data) {
+			if (activePrimaryFilter === 'only_ipv4') {
+				return [getProbeForTextExport(data, 'ipv4'), getProbeForTextExport(data, 'ipv6')].filter(Boolean);
+			}
+			if (activePrimaryFilter === 'only_ipv6') {
+				return [getProbeForTextExport(data, 'ipv6'), getProbeForTextExport(data, 'ipv4')].filter(Boolean);
+			}
+			return [getProbeForTextExport(data, 'ipv6'), getProbeForTextExport(data, 'ipv4')].filter(Boolean);
+		}
+
+		function getPreferredTextExportProbe(data) {
+			const candidates = getTextExportProbeCandidates(data);
+			if (activeCountryFilter !== 'all') {
+				const countryMatchedProbe = candidates.find(function (probe) {
+					return getExitCountryFilterKey(probe.exit) === activeCountryFilter;
+				});
+				if (countryMatchedProbe) {
+					return countryMatchedProbe;
+				}
+			}
+			return candidates[0] || null;
+		}
+
+		function buildTextExportLine(data) {
+			const proxyIP = normalizeExportValue(data?.proxyIP);
+			const portRemote = normalizeExportValue(data?.portRemote);
+			if (!proxyIP || !portRemote) {
+				return '';
+			}
+
+			const exitData = getPreferredTextExportProbe(data)?.exit || {};
+			const country = normalizeExportValue(exitData.country);
+			const city = normalizeExportValue(exitData.city);
+			const asn = normalizeExportValue(exitData.asn);
+			const asOrganization = normalizeExportValue(exitData.asOrganization);
+			const description = [country, city, asn ? 'AS' + asn : '', asOrganization].filter(Boolean).join(' ');
+			return proxyIP + ':' + portRemote + '#' + description;
+		}
+
+		function buildTextExport(records) {
+			return records.map(function (record) {
+				return buildTextExportLine(record.data);
+			}).filter(Boolean).join('\\n');
+		}
+
+		function escapeCsvValue(value) {
+			const text = normalizeExportValue(value);
+			if (!/[",\\r\\n]/.test(text)) {
+				return text;
+			}
+			return '"' + text.replace(/"/g, '""') + '"';
+		}
+
+		function buildCsvExport(records) {
+			const headerLine = EXPORT_CSV_COLUMNS.map(function (column) {
+				return escapeCsvValue(column.header);
+			}).join(',');
+			const rows = records.map(function (record) {
+				return EXPORT_CSV_COLUMNS.map(function (column) {
+					return escapeCsvValue(getNestedExportValue(record.data, column.path));
+				}).join(',');
+			});
+			return [headerLine].concat(rows).join('\\n');
+		}
+
+		function padExportDatePart(value) {
+			return String(value).padStart(2, '0');
+		}
+
+		function formatExportTimestamp(date) {
+			const current = date || new Date();
+			return current.getFullYear()
+				+ '-' + padExportDatePart(current.getMonth() + 1)
+				+ '-' + padExportDatePart(current.getDate())
+				+ ' ' + padExportDatePart(current.getHours())
+				+ padExportDatePart(current.getMinutes())
+				+ padExportDatePart(current.getSeconds());
+		}
+
+		function getExportFileLabel() {
+			const fallbackText = getFilterToggleLabel(getCurrentFilteredRecords().length);
+			const rawText = String(filterToggleText?.innerText || fallbackText || '').trim();
+			const label = rawText.replace(/^筛选：\\s*/, '').trim() || '全部结果';
+			return label.replace(/[\\\\/:*?"<>|]/g, '_').replace(/\\s+/g, ' ').trim() || '全部结果';
+		}
+
+		function getExportFileName(extension) {
+			return getExportFileLabel() + ' ' + formatExportTimestamp(new Date()) + '.' + extension;
+		}
+
+		function downloadTextFile(content, filename, mimeType) {
+			const blob = new Blob([content], { type: mimeType + ';charset=utf-8' });
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = filename;
+			link.style.display = 'none';
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			window.setTimeout(function () {
+				URL.revokeObjectURL(url);
+			}, 1000);
+		}
+
+		async function writeTextToClipboard(text) {
+			if (navigator.clipboard && window.isSecureContext) {
+				await navigator.clipboard.writeText(text);
+				return;
+			}
+
+			const textArea = document.createElement('textarea');
+			textArea.value = text;
+			textArea.setAttribute('readonly', '');
+			textArea.style.position = 'fixed';
+			textArea.style.top = '-1000px';
+			textArea.style.left = '-1000px';
+			document.body.appendChild(textArea);
+			textArea.select();
+			const didCopy = document.execCommand('copy');
+			textArea.remove();
+			if (!didCopy) {
+				throw new Error('Clipboard copy command failed');
+			}
+		}
+
+		function showExportToast(message, tone) {
+			let toast = document.getElementById('exportToast');
+			if (!toast) {
+				toast = document.createElement('div');
+				toast.id = 'exportToast';
+				toast.className = 'export-toast';
+				toast.setAttribute('role', 'status');
+				toast.setAttribute('aria-live', 'polite');
+				document.body.appendChild(toast);
+			}
+
+			toast.hidden = false;
+			toast.innerText = message;
+			toast.className = tone === 'error' ? 'export-toast is-error is-visible' : 'export-toast is-visible';
+			window.clearTimeout(exportToastTimer);
+			exportToastTimer = window.setTimeout(function () {
+				toast.classList.remove('is-visible');
+				window.setTimeout(function () {
+					toast.hidden = true;
+				}, 240);
+			}, 2400);
+		}
+
+		async function handleExport(format) {
+			const records = getExportableRecords();
+			if (!records.length) {
+				showExportToast('当前筛选没有可导出的有效结果', 'error');
+				return;
+			}
+
+			try {
+				if (format === 'csv') {
+					downloadTextFile('\\ufeff' + buildCsvExport(records), getExportFileName('csv'), 'text/csv');
+					showExportToast('已开始下载 CSV 文件');
+					return;
+				}
+
+				const textContent = buildTextExport(records);
+				if (!textContent) {
+					showExportToast('当前筛选没有可导出的 TXT 内容', 'error');
+					return;
+				}
+
+				if (format === 'clipboard') {
+					await writeTextToClipboard(textContent);
+					showExportToast('已经将结果导出到了粘贴板');
+					return;
+				}
+
+				if (format === 'txt') {
+					downloadTextFile(textContent, getExportFileName('txt'), 'text/plain');
+					showExportToast('已开始下载 TXT 文件');
+				}
+			} catch (error) {
+				console.error('Failed to export results', error);
+				showExportToast(format === 'clipboard' ? '粘贴板写入失败，请检查浏览器权限' : '导出失败，请稍后重试', 'error');
+			}
 		}
 
 		function getHistory() {
@@ -3780,7 +4108,7 @@ function generateHTML() {
 
 					renderExitList(itemObj.exitList, exitIps);
 				} else {
-					updateResultRecordAsError(resultRecord);
+					updateResultRecordAsError(resultRecord, data);
 					itemObj.el.className = 'result-item error';
 					updateResultFlag(itemObj, '');
 					itemObj.badge.className = 'status-badge status-error';
@@ -3796,7 +4124,7 @@ function generateHTML() {
 				}
 			} catch (error) {
 				completedCount++;
-				updateResultRecordAsError(resultRecord);
+				updateResultRecordAsError(resultRecord, null);
 				itemObj.el.className = 'result-item error';
 				updateResultFlag(itemObj, '');
 				itemObj.badge.className = 'status-badge status-error';
@@ -3982,6 +4310,15 @@ function generateHTML() {
 			activeCountryFilter = button.dataset.countryFilter || 'all';
 			updateResultFilters();
 		});
+
+		if (exportGroup) {
+			exportGroup.addEventListener('click', function (event) {
+				const button = event.target.closest('[data-export-format]');
+				if (!button) return;
+
+				handleExport(button.dataset.exportFormat || '');
+			});
+		}
 
 		checkBtn.addEventListener('click', async function () {
 			const value = batchMode.checked ? normalizeBatchInputValue(inputList.value) : stripTargetLabel(inputList.value);
