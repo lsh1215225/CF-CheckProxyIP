@@ -301,6 +301,7 @@ function generateHTML() {
 
 		button,
 		input,
+		select,
 		textarea {
 			font: inherit;
 		}
@@ -325,6 +326,8 @@ function generateHTML() {
 		.guide-flow,
 		.guide-step,
 		.guide-tip,
+		.proxy-search-shell,
+		.proxy-search-control,
 		.result-item,
 		.status-badge,
 		.meta-chip,
@@ -1471,6 +1474,91 @@ function generateHTML() {
 			color: #ffffff;
 		}
 
+		.proxy-search-shell {
+			margin-top: 24px;
+			padding: 28px;
+			position: relative;
+			overflow: hidden;
+			z-index: 1;
+		}
+
+		.proxy-search-shell::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			background:
+				radial-gradient(circle at top right, rgba(251, 191, 36, 0.12), transparent 30%),
+				radial-gradient(circle at bottom left, rgba(97, 219, 255, 0.12), transparent 28%);
+			pointer-events: none;
+		}
+
+		.proxy-search-header,
+		.proxy-search-form {
+			position: relative;
+			z-index: 1;
+		}
+
+		.proxy-search-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			gap: 20px;
+		}
+
+		.proxy-search-form {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: flex-end;
+			gap: 16px;
+			margin-top: 24px;
+		}
+
+		.proxy-search-field {
+			flex: 1 1 180px;
+			min-width: 0;
+		}
+
+		.proxy-search-custom-field {
+			flex: 0 1 170px;
+		}
+
+		.proxy-search-control {
+			min-height: 58px;
+			padding: 0 48px 0 18px;
+			border-radius: 18px;
+		}
+
+		select.proxy-search-control {
+			appearance: none;
+			background-image:
+				linear-gradient(45deg, transparent 50%, currentColor 50%),
+				linear-gradient(135deg, currentColor 50%, transparent 50%);
+			background-position:
+				calc(100% - 23px) 50%,
+				calc(100% - 17px) 50%;
+			background-size: 6px 6px, 6px 6px;
+			background-repeat: no-repeat;
+			color: var(--text);
+		}
+
+		.proxy-search-input {
+			padding-right: 18px;
+			text-transform: uppercase;
+		}
+
+		.proxy-search-input:disabled {
+			cursor: not-allowed;
+			opacity: 0.72;
+			color: var(--text-soft);
+		}
+
+		.proxy-search-btn {
+			flex: 0 0 160px;
+			min-height: 58px;
+			border-radius: 18px;
+			font-size: 1rem;
+		}
+
 		.result-item {
 			position: relative;
 			overflow: hidden;
@@ -2129,6 +2217,23 @@ function generateHTML() {
 			color: #10253d;
 		}
 
+		html[data-theme='light'] .proxy-search-shell::before {
+			background:
+				radial-gradient(circle at top right, rgba(245, 158, 11, 0.1), transparent 30%),
+				radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.1), transparent 28%);
+		}
+
+		html[data-theme='light'] select.proxy-search-control {
+			background-image:
+				linear-gradient(45deg, transparent 50%, currentColor 50%),
+				linear-gradient(135deg, currentColor 50%, transparent 50%);
+			background-position:
+				calc(100% - 23px) 50%,
+				calc(100% - 17px) 50%;
+			background-size: 6px 6px, 6px 6px;
+			background-repeat: no-repeat;
+		}
+
 		html[data-theme='light'] .result-item {
 			border-color: rgba(95, 123, 150, 0.14);
 			background:
@@ -2253,6 +2358,7 @@ function generateHTML() {
 			.panel-header,
 			.results-header,
 			.guide-header,
+			.proxy-search-header,
 			.control-row,
 			.results-empty,
 			.result-top {
@@ -2263,6 +2369,7 @@ function generateHTML() {
 			.panel-header,
 			.results-header,
 			.guide-header,
+			.proxy-search-header,
 			.control-row {
 				align-items: stretch;
 			}
@@ -2270,7 +2377,8 @@ function generateHTML() {
 			.control-panel,
 			.side-card,
 			.results-shell,
-			.guide-shell {
+			.guide-shell,
+			.proxy-search-shell {
 				padding: 22px;
 			}
 
@@ -2325,6 +2433,10 @@ function generateHTML() {
 
 			.metric-card {
 				padding: 14px;
+			}
+
+			.proxy-search-btn {
+				flex-basis: 100%;
 			}
 		}
 	</style>
@@ -2567,6 +2679,60 @@ function generateHTML() {
 					<strong>这页检测的意义：</strong>本工具不是只做静态解析，而是尽量模拟真实链路去验证目标是否真的可用，帮助你更快筛掉“看起来在线、实际不可做代理”的候选 IP。
 				</div>
 			</section>
+
+			<section class="surface-card proxy-search-shell" aria-labelledby="proxySearchTitle">
+				<div class="proxy-search-header">
+					<div>
+						<p class="section-kicker">Finder</p>
+						<h2 class="results-title" id="proxySearchTitle">获取更多 ProxyIP</h2>
+					</div>
+					<div class="guide-badge">More</div>
+				</div>
+
+				<div class="proxy-search-form">
+					<label class="proxy-search-field" for="proxyPortSelect">
+						<span class="field-label">端口:</span>
+						<select class="input-control proxy-search-control" id="proxyPortSelect">
+							<option value="443">443</option>
+							<option value="nonstandard">非标</option>
+						</select>
+					</label>
+
+					<label class="proxy-search-field" for="proxyRegionSelect">
+						<span class="field-label">地区:</span>
+						<select class="input-control proxy-search-control" id="proxyRegionSelect">
+							<option value="custom">✍️ 自定义地区</option>
+							<optgroup label="🌏 亚洲 / AS">
+								<option value="HK">🇭🇰 香港</option>
+								<option value="TW">🇨🇳 台湾</option>
+								<option value="KR">🇰🇷 韩国</option>
+								<option value="JP">🇯🇵 日本</option>
+								<option value="SG">🇸🇬 新加坡</option>
+								<option value="IN">🇮🇳 印度</option>
+							</optgroup>
+							<optgroup label="🌎 北美 / NA">
+								<option value="US">🇺🇸 美国</option>
+								<option value="CA">🇨🇦 加拿大</option>
+							</optgroup>
+							<optgroup label="🌍 欧洲 / EU">
+								<option value="GB">🇬🇧 英国</option>
+								<option value="DE">🇩🇪 德国</option>
+								<option value="FR">🇫🇷 法国</option>
+							</optgroup>
+							<optgroup label="🌏 大洋洲 / OC">
+								<option value="AU">🇦🇺 澳大利亚</option>
+							</optgroup>
+						</select>
+					</label>
+
+					<label class="proxy-search-field proxy-search-custom-field" for="customRegionInput" id="customRegionField">
+						<span class="field-label">国家代码:</span>
+						<input class="input-control proxy-search-control proxy-search-input" type="text" id="customRegionInput" maxlength="2" pattern="[A-Za-z]{2}" placeholder="US" autocomplete="off" inputmode="text">
+					</label>
+
+					<button class="primary-btn proxy-search-btn" id="fofaBtn" type="button">FOFA</button>
+				</div>
+			</section>
 		</main>
 
 		<footer class="site-footer">
@@ -2612,6 +2778,11 @@ function generateHTML() {
 		const exportGroup = document.getElementById('exportGroup');
 		const filterEmpty = document.getElementById('filterEmpty');
 		const themeToggle = document.getElementById('themeToggle');
+		const proxyRegionSelect = document.getElementById('proxyRegionSelect');
+		const proxyPortSelect = document.getElementById('proxyPortSelect');
+		const customRegionField = document.getElementById('customRegionField');
+		const customRegionInput = document.getElementById('customRegionInput');
+		const fofaBtn = document.getElementById('fofaBtn');
 		const THEME_STORAGE_KEY = 'cf_proxy_theme';
 		const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 		const BASE_MAP_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -3796,6 +3967,90 @@ function generateHTML() {
 			}, 2400);
 		}
 
+		function showToast(message, tone) {
+			showExportToast(message, tone);
+		}
+
+		function normalizeCustomRegionCode(value) {
+			return String(value || '').replace(/[^a-z]/gi, '').slice(0, 2).toUpperCase();
+		}
+
+		function updateCustomRegionField(shouldFocus) {
+			if (!proxyRegionSelect || !customRegionField || !customRegionInput) return;
+
+			const isCustom = proxyRegionSelect.value === 'custom';
+			const selectedRegion = /^[A-Z]{2}$/.test(proxyRegionSelect.value) ? proxyRegionSelect.value : '';
+
+			customRegionInput.disabled = !isCustom;
+			customRegionInput.required = isCustom;
+			customRegionInput.placeholder = isCustom ? 'US' : '';
+
+			if (isCustom) {
+				customRegionInput.value = normalizeCustomRegionCode(customRegionInput.value);
+				if (shouldFocus) {
+					window.setTimeout(function () {
+						customRegionInput.focus();
+					}, 0);
+				}
+			} else {
+				customRegionInput.value = selectedRegion;
+			}
+		}
+
+		function getSelectedFOFARegion() {
+			if (!proxyRegionSelect) return '';
+
+			if (proxyRegionSelect.value === 'custom') {
+				const region = normalizeCustomRegionCode(customRegionInput ? customRegionInput.value : '');
+				if (customRegionInput) {
+					customRegionInput.value = region;
+				}
+
+				if (!/^[A-Z]{2}$/.test(region)) {
+					showToast('请输入有效的两位国家代码', 'error');
+					return null;
+				}
+
+				return region;
+			}
+
+			return /^[A-Z]{2}$/.test(proxyRegionSelect.value) ? proxyRegionSelect.value : '';
+		}
+
+		function openFOFA() {
+			const region = getSelectedFOFARegion();
+			const port = proxyPortSelect ? proxyPortSelect.value : '';
+
+			if (region === null) return;
+
+			if (!region) {
+				showToast('请选择有效地区', 'error');
+				return;
+			}
+
+			let regionQuery = '';
+			if (region === 'HK' || region === 'TW' || region === 'MO') {
+				regionQuery = 'region="' + region + '"';
+			} else {
+				regionQuery = 'country="' + region + '"';
+			}
+
+			let portQuery = '';
+			if (port === '443') {
+				portQuery = 'port="443"';
+			} else if (port === 'nonstandard') {
+				portQuery = '(port!="80" && port!="8080" && port!="8880" && port!="2052" && port!="2082" && port!="2086" && port!="2095" && port!="443" && port!="2053" && port!="2083" && port!="2087" && port!="2096" && port!="8443")';
+			} else {
+				showToast('请选择有效端口', 'error');
+				return;
+			}
+
+			const query = 'server=="cloudflare" && header="Forbidden" && asn!="13335" && asn!="209242" && ' + regionQuery + ' && ' + portQuery;
+			const qbase64 = btoa(query);
+			const url = 'https://fofa.info/result?qbase64=' + encodeURIComponent(qbase64);
+			window.open(url, '_blank', 'noopener');
+		}
+
 		async function handleExport(format) {
 			const records = getExportableRecords();
 			if (!records.length) {
@@ -4346,6 +4601,25 @@ function generateHTML() {
 			});
 		}
 
+		if (proxyRegionSelect) {
+			proxyRegionSelect.addEventListener('change', function () {
+				updateCustomRegionField(true);
+			});
+		}
+
+		if (customRegionInput) {
+			customRegionInput.addEventListener('input', function () {
+				const normalizedValue = normalizeCustomRegionCode(customRegionInput.value);
+				if (customRegionInput.value !== normalizedValue) {
+					customRegionInput.value = normalizedValue;
+				}
+			});
+		}
+
+		if (fofaBtn) {
+			fofaBtn.addEventListener('click', openFOFA);
+		}
+
 		checkBtn.addEventListener('click', async function () {
 			const value = batchMode.checked ? normalizeBatchInputValue(inputList.value) : stripTargetLabel(inputList.value);
 			if (!value) return;
@@ -4449,6 +4723,7 @@ function generateHTML() {
 			bindInputShortcut();
 			renderDashboard();
 			updateResultFilters();
+			updateCustomRegionField();
 			loadCfLocations();
 			fetchVisitCount();
 
