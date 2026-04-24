@@ -2685,19 +2685,12 @@ function generateHTML() {
 					<div>
 						<p class="section-kicker">Finder</p>
 						<h2 class="results-title" id="proxySearchTitle">获取更多 ProxyIP</h2>
+						<p class="results-subtitle">按端口和地区从网络测绘数据库中发现候选 ProxyIP，方便继续放回本工具检测可用性。</p>
 					</div>
 					<div class="guide-badge">More</div>
 				</div>
 
 				<div class="proxy-search-form">
-					<label class="proxy-search-field" for="proxyPortSelect">
-						<span class="field-label">端口:</span>
-						<select class="input-control proxy-search-control" id="proxyPortSelect">
-							<option value="443">443</option>
-							<option value="nonstandard">非标</option>
-						</select>
-					</label>
-
 					<label class="proxy-search-field" for="proxyRegionSelect">
 						<span class="field-label">地区:</span>
 						<select class="input-control proxy-search-control" id="proxyRegionSelect">
@@ -2730,6 +2723,13 @@ function generateHTML() {
 						<input class="input-control proxy-search-control proxy-search-input" type="text" id="customRegionInput" maxlength="2" pattern="[A-Za-z]{2}" placeholder="US" autocomplete="off" inputmode="text">
 					</label>
 
+					<label class="proxy-search-field" for="proxyPortSelect">
+						<span class="field-label">端口:</span>
+						<select class="input-control proxy-search-control" id="proxyPortSelect">
+							<option value="443">443</option>
+							<option value="nonstandard">非标</option>
+						</select>
+					</label>
 					<button class="primary-btn proxy-search-btn" id="fofaBtn" type="button">FOFA</button>
 				</div>
 			</section>
