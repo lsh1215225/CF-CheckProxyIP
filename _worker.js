@@ -1051,19 +1051,26 @@ function generateHTML() {
 			color: #ffffff;
 		}
 
-		.filter-toggle::after {
-			content: '';
-			width: 9px;
-			height: 9px;
+		.filter-toggle-icon {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 18px;
+			height: 18px;
 			flex: none;
-			border-right: 2px solid currentColor;
-			border-bottom: 2px solid currentColor;
-			transform: rotate(45deg);
+		}
+
+		.filter-toggle-icon svg {
+			display: block;
+			width: 12px;
+			height: 12px;
+			overflow: visible;
+			transform-origin: 50% 50%;
 			transition: transform 0.2s ease;
 		}
 
-		.filter-toggle[aria-expanded='true']::after {
-			transform: rotate(225deg);
+		.filter-toggle[aria-expanded='true'] .filter-toggle-icon svg {
+			transform: rotate(180deg);
 		}
 
 		.filter-panel {
@@ -2380,6 +2387,11 @@ function generateHTML() {
 				<div class="results-filters" id="resultsFilters" hidden>
 					<button class="filter-toggle" id="filterToggle" type="button" aria-expanded="false">
 						<span id="filterToggleText">筛选：全部结果</span>
+						<span class="filter-toggle-icon" aria-hidden="true">
+							<svg viewBox="0 0 12 12" fill="none">
+								<path d="M2.5 4.25L6 7.75L9.5 4.25" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+							</svg>
+						</span>
 					</button>
 					<div class="filter-panel" id="filterPanel" hidden>
 						<div class="filter-row">
