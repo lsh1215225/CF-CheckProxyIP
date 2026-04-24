@@ -2260,6 +2260,7 @@ function generateHTML() {
 		let successCount = 0;
 		let inputCount = 0;
 		let appState = 'idle';
+		const CHECK_CONCURRENCY = 32;
 
 		function getStoredTheme() {
 			try {
@@ -2555,6 +2556,97 @@ function generateHTML() {
 
 		function stripTargetLabel(value) {
 			return String(value || '').split('#')[0].trim();
+		}
+
+		function parseClientTarget(input) {
+			let host = stripTargetLabel(input);
+			let port = 443;
+
+			if (host.startsWith('[')) {
+				const ipv6PortIndex = host.lastIndexOf(']:');
+				if (ipv6PortIndex !== -1) {
+					const maybePort = Number(host.slice(ipv6PortIndex + 2));
+					if (Number.isInteger(maybePort) && maybePort >= 1 && maybePort <= 65535) {
+						port = maybePort;
+						host = host.slice(0, ipv6PortIndex + 1);
+					}
+				}
+				return { host, port };
+			}
+
+			const colonMatches = host.match(/:/g) || [];
+			if (colonMatches.length === 1) {
+				const separatorIndex = host.lastIndexOf(':');
+				const maybePort = Number(host.slice(separatorIndex + 1));
+				if (Number.isInteger(maybePort) && maybePort >= 1 && maybePort <= 65535) {
+					port = maybePort;
+					host = host.slice(0, separatorIndex);
+				}
+			}
+
+			return { host, port };
+		}
+
+		function isClientIPv4(value) {
+			const parts = String(value || '').split('.');
+			return parts.length === 4 && parts.every(function (part) {
+				if (!/^\\d{1,3}$/.test(part)) return false;
+				const num = Number(part);
+				return num >= 0 && num <= 255;
+			});
+		}
+
+		function isClientRawIPv6(value) {
+			const text = String(value || '');
+			return text.includes(':') && /^[0-9a-fA-F:]+$/.test(text);
+		}
+
+		function getDirectIpTarget(input) {
+			const parsed = parseClientTarget(input);
+			const bracketedIPv6 = parsed.host.startsWith('[') && parsed.host.endsWith(']');
+			const bracketedIPv6Body = bracketedIPv6 ? parsed.host.slice(1, -1) : '';
+			const rawIPv6 = isClientRawIPv6(parsed.host);
+
+			if (isClientIPv4(parsed.host)) {
+				return parsed.host + ':' + parsed.port;
+			}
+
+			if (rawIPv6) {
+				return '[' + parsed.host + ']:' + parsed.port;
+			}
+
+			if (bracketedIPv6 && isClientRawIPv6(bracketedIPv6Body)) {
+				return parsed.host + ':' + parsed.port;
+			}
+
+			return '';
+		}
+
+		function pushResolvedTargets(targetGroups, output) {
+			targetGroups.forEach(function (group) {
+				group.forEach(function (target) {
+					output.push(target);
+				});
+			});
+		}
+
+		async function runWithConcurrency(items, limit, worker) {
+			let nextIndex = 0;
+			const workerCount = Math.min(Math.max(Number(limit) || 1, 1), items.length);
+			const runners = [];
+
+			async function runNext() {
+				while (nextIndex < items.length) {
+					const currentIndex = nextIndex++;
+					await worker(items[currentIndex], currentIndex);
+				}
+			}
+
+			for (let i = 0; i < workerCount; i++) {
+				runners.push(runNext());
+			}
+
+			await Promise.all(runners);
 		}
 
 		function normalizeBatchInputControl(control) {
@@ -3158,28 +3250,41 @@ function generateHTML() {
 			setAppState('resolving');
 
 			try {
-				const allResolvedTargets = [];
+				const resolveJobs = [];
+				const targetGroups = lines.map(function (line) {
+					const directTarget = batchMode.checked ? getDirectIpTarget(line) : '';
+					if (directTarget) {
+						return [directTarget];
+					}
 
-				for (const line of lines) {
+					const group = [];
+					resolveJobs.push({ line, group });
+					return group;
+				});
+
+				for (const job of resolveJobs) {
 					try {
-						const response = await fetch('/resolve?proxyip=' + encodeURIComponent(line));
+						const response = await fetch('/resolve?proxyip=' + encodeURIComponent(job.line));
 						const targets = await response.json();
 						if (Array.isArray(targets)) {
-							allResolvedTargets.push(...targets);
+							job.group.push(...targets);
 						}
 					} catch (error) {
-						console.error('Resolve error for', line, error);
+						console.error('Resolve error for', job.line, error);
 					}
 				}
+
+				const allResolvedTargets = [];
+				pushResolvedTargets(targetGroups, allResolvedTargets);
 
 				if (allResolvedTargets.length > 0) {
 					totalTargets = allResolvedTargets.length;
 					setAppState('running');
 					updateProgress();
 
-					await Promise.all(allResolvedTargets.map(function (target) {
+					await runWithConcurrency(allResolvedTargets, CHECK_CONCURRENCY, function (target) {
 						return checkIP(target);
-					}));
+					});
 
 					const failCount = Math.max(totalTargets - successCount, 0);
 					progressText.innerText = '总计 ' + totalTargets + ' · 有效 ' + successCount + ' · 失败 ' + failCount;
