@@ -316,6 +316,8 @@ function generateHTML() {
 		.results-pill,
 		.results-empty,
 		.results-filters,
+		.filter-toggle,
+		.filter-panel,
 		.filter-chip,
 		.filter-empty,
 		.empty-visual,
@@ -1014,6 +1016,7 @@ function generateHTML() {
 		}
 
 		.results-filters[hidden],
+		.filter-panel[hidden],
 		.filter-empty[hidden] {
 			display: none;
 		}
@@ -1023,6 +1026,49 @@ function generateHTML() {
 			gap: 12px;
 			margin-top: 22px;
 			margin-bottom: 18px;
+		}
+
+		.filter-toggle {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			width: 100%;
+			min-height: 44px;
+			padding: 10px 14px;
+			border-radius: 18px;
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			background: rgba(255, 255, 255, 0.04);
+			color: var(--text-soft);
+			font-weight: 800;
+			cursor: pointer;
+			text-align: left;
+		}
+
+		.filter-toggle:hover {
+			border-color: rgba(97, 219, 255, 0.28);
+			background: rgba(97, 219, 255, 0.08);
+			color: #ffffff;
+		}
+
+		.filter-toggle::after {
+			content: '';
+			width: 9px;
+			height: 9px;
+			flex: none;
+			border-right: 2px solid currentColor;
+			border-bottom: 2px solid currentColor;
+			transform: rotate(45deg);
+			transition: transform 0.2s ease;
+		}
+
+		.filter-toggle[aria-expanded='true']::after {
+			transform: rotate(225deg);
+		}
+
+		.filter-panel {
+			display: grid;
+			gap: 12px;
 		}
 
 		.filter-row {
@@ -1800,6 +1846,18 @@ function generateHTML() {
 			color: #365168;
 		}
 
+		html[data-theme='light'] .filter-toggle {
+			border-color: rgba(95, 123, 150, 0.14);
+			background: rgba(255, 255, 255, 0.66);
+			color: #23415a;
+		}
+
+		html[data-theme='light'] .filter-toggle:hover {
+			border-color: rgba(14, 165, 233, 0.24);
+			background: rgba(14, 165, 233, 0.08);
+			color: #10253d;
+		}
+
 		html[data-theme='light'] .filter-chip:hover {
 			border-color: rgba(14, 165, 233, 0.24);
 			background: rgba(14, 165, 233, 0.08);
@@ -2250,7 +2308,11 @@ function generateHTML() {
 				</div>
 
 				<div class="results-filters" id="resultsFilters" hidden>
-					<div class="filter-row">
+					<button class="filter-toggle" id="filterToggle" type="button" aria-expanded="false">
+						<span id="filterToggleText">筛选：全部结果</span>
+					</button>
+					<div class="filter-panel" id="filterPanel" hidden>
+						<div class="filter-row">
 						<span class="filter-row-label">筛选</span>
 						<div class="filter-options" id="primaryFilterGroup" aria-label="结果类型筛选"></div>
 					</div>
@@ -2258,6 +2320,7 @@ function generateHTML() {
 						<span class="filter-row-label">地区</span>
 						<div class="filter-options" id="countryFilterGroup" aria-label="出口地区筛选"></div>
 					</div>
+				</div>
 				</div>
 				<div class="filter-empty" id="filterEmpty" hidden>当前筛选没有匹配的检测结果。</div>
 				<div id="results" class="results-list"></div>
@@ -2364,6 +2427,9 @@ function generateHTML() {
 		const emptyStateTitle = document.getElementById('emptyStateTitle');
 		const emptyStateDescription = document.getElementById('emptyStateDescription');
 		const resultsFilters = document.getElementById('resultsFilters');
+		const filterToggle = document.getElementById('filterToggle');
+		const filterPanel = document.getElementById('filterPanel');
+		const filterToggleText = document.getElementById('filterToggleText');
 		const primaryFilterGroup = document.getElementById('primaryFilterGroup');
 		const countryFilterGroup = document.getElementById('countryFilterGroup');
 		const filterEmpty = document.getElementById('filterEmpty');
@@ -2398,6 +2464,7 @@ function generateHTML() {
 		let resultRecords = [];
 		let activePrimaryFilter = 'all';
 		let activeCountryFilter = 'all';
+		let isFilterPanelExpanded = false;
 		let isCreatingResultBatch = false;
 
 		function getStoredTheme() {
@@ -3092,6 +3159,7 @@ function generateHTML() {
 			resultRecords = [];
 			activePrimaryFilter = 'all';
 			activeCountryFilter = 'all';
+			isFilterPanelExpanded = false;
 			updateResultFilters();
 		}
 
@@ -3261,11 +3329,44 @@ function generateHTML() {
 			return visibleCount;
 		}
 
+		function getPrimaryFilterLabel(filterKey) {
+			const filter = PRIMARY_RESULT_FILTERS.find(function (entry) {
+				return entry.key === filterKey;
+			});
+			return filter ? filter.label : '全部';
+		}
+
+		function getFilterToggleLabel(visibleCount) {
+			const activeParts = [];
+			if (activePrimaryFilter !== 'all') {
+				activeParts.push(getPrimaryFilterLabel(activePrimaryFilter));
+			}
+			if (activeCountryFilter !== 'all') {
+				activeParts.push(activeCountryFilter);
+			}
+
+			if (!activeParts.length) {
+				return '筛选：全部结果';
+			}
+
+			return '筛选：' + activeParts.join(' · ') + ' (' + visibleCount + ')';
+		}
+
+		function updateFilterPanelState(visibleCount) {
+			if (!filterToggle || !filterPanel || !filterToggleText) return;
+			filterPanel.hidden = !isFilterPanelExpanded;
+			filterToggle.setAttribute('aria-expanded', String(isFilterPanelExpanded));
+			filterToggleText.innerText = getFilterToggleLabel(visibleCount);
+		}
+
 		function updateResultFilters() {
-			if (!resultsFilters || !primaryFilterGroup || !countryFilterGroup || !filterEmpty) return;
+			if (!resultsFilters || !filterToggle || !filterPanel || !filterToggleText || !primaryFilterGroup || !countryFilterGroup || !filterEmpty) return;
 
 			if (!resultRecords.length) {
 				resultsFilters.hidden = true;
+				filterPanel.hidden = true;
+				filterToggle.setAttribute('aria-expanded', 'false');
+				filterToggleText.innerText = '筛选：全部结果';
 				filterEmpty.hidden = true;
 				return;
 			}
@@ -3287,6 +3388,7 @@ function generateHTML() {
 			}).join('');
 
 			const visibleCount = applyResultFilters();
+			updateFilterPanelState(visibleCount);
 			filterEmpty.hidden = visibleCount !== 0;
 		}
 
@@ -3758,6 +3860,11 @@ function generateHTML() {
 				applyTheme(event.matches ? 'dark' : 'light', 'system');
 			});
 		}
+
+		filterToggle.addEventListener('click', function () {
+			isFilterPanelExpanded = !isFilterPanelExpanded;
+			updateResultFilters();
+		});
 
 		primaryFilterGroup.addEventListener('click', function (event) {
 			const button = event.target.closest('[data-primary-filter]');
