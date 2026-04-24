@@ -2546,16 +2546,205 @@ function generateHTML() {
 		}
 
 		function normalizeBatchInputValue(value) {
-			return String(value ?? '')
-				.replace(/\\r\\n?/g, '\\n')
-				.replace(/[,\uFF0C]/g, '\\n')
-				.split('\\n')
-				.map(stripTargetLabel)
-				.join('\\n');
+			const targets = [];
+			normalizeDelimitedTargetText(value).split('\\n').forEach(function (line) {
+				extractTargetsFromInputLine(line).forEach(function (target) {
+					targets.push(target);
+				});
+			});
+			return targets.join('\\n');
 		}
 
 		function stripTargetLabel(value) {
-			return String(value || '').split('#')[0].trim();
+			const normalized = normalizeDelimitedTargetText(value);
+			const firstLine = normalized.split('\\n')[0] || '';
+			const targets = extractTargetsFromInputLine(firstLine);
+			return targets[0] || stripInlineComment(firstLine);
+		}
+
+		function normalizeDelimitedTargetText(value) {
+			return String(value ?? '')
+				.replace(/\\r\\n?/g, '\\n')
+				.replace(/[\uFF0C]/g, ',')
+				.replace(/([^\\s,\\t|]+)[,\\t ]+\\s*(\\d{1,5})(?=\\s*(?:$|\\n|#|\\/\\/))/g, function (match, host, port) {
+					return isValidPortValue(port) ? host + ':' + normalizePortValue(port) : match;
+				})
+				.replace(/,/g, '\\n')
+				.replace(/\\t+/g, ' ');
+		}
+
+		function stripInlineComment(value) {
+			const text = String(value || '').split('#')[0];
+			for (let i = 0; i < text.length - 1; i++) {
+				if (text[i] === '/' && text[i + 1] === '/' && text[i - 1] !== ':') {
+					return text.slice(0, i).trim();
+				}
+			}
+			return text.trim();
+		}
+
+		function isValidPortValue(value) {
+			const text = String(value || '').trim();
+			if (!/^\\d{1,5}$/.test(text)) return false;
+			const port = Number(text);
+			return Number.isInteger(port) && port >= 1 && port <= 65535;
+		}
+
+		function normalizePortValue(value) {
+			return String(Number(String(value || '').trim()));
+		}
+
+		function trimTargetToken(value) {
+			return String(value || '')
+				.trim()
+				.replace(/^[<({'"“‘]+/, '')
+				.replace(/[>)\\}'"”’。，、；;]+$/g, '');
+		}
+
+		function extractTargetsFromInputLine(value) {
+			const line = stripInlineComment(String(value || '').replace(/\uFF1A/g, ':'));
+			const matches = [];
+
+			collectUrlTargetMatches(line, matches);
+			collectBracketedIPv6TargetMatches(line, matches);
+			collectDottedTargetMatches(line, matches);
+			collectRawIPv6TargetMatches(line, matches);
+
+			return matches
+				.sort(function (left, right) { return left.index - right.index; })
+				.map(function (match) { return match.target; });
+		}
+
+		function collectUrlTargetMatches(line, matches) {
+			const pattern = /(?:https?|wss?|tcp|tls|socks5?):\\/\\/[^\\s'"<>|]+/ig;
+			let match;
+			while ((match = pattern.exec(line)) !== null) {
+				addTargetMatch(line, matches, match.index, match.index + match[0].length, match[0]);
+			}
+		}
+
+		function collectBracketedIPv6TargetMatches(line, matches) {
+			const pattern = /\\[[0-9a-fA-F:.]+\\](?::\\d{1,5})?/g;
+			let match;
+			while ((match = pattern.exec(line)) !== null) {
+				addTargetMatch(line, matches, match.index, match.index + match[0].length, match[0]);
+			}
+		}
+
+		function collectDottedTargetMatches(line, matches) {
+			const pattern = /[A-Za-z0-9.-]+(?::\\d{1,5})?/g;
+			let match;
+			while ((match = pattern.exec(line)) !== null) {
+				addTargetMatch(line, matches, match.index, match.index + match[0].length, match[0]);
+			}
+		}
+
+		function collectRawIPv6TargetMatches(line, matches) {
+			const pattern = /[^\\s|,，;；]+/g;
+			let match;
+			while ((match = pattern.exec(line)) !== null) {
+				const token = trimTargetToken(match[0]);
+				const colonMatches = token.match(/:/g) || [];
+				if (colonMatches.length < 2 || !isClientRawIPv6(token)) continue;
+
+				const offset = match[0].indexOf(token);
+				const index = match.index + Math.max(offset, 0);
+				addTargetMatch(line, matches, index, index + token.length, token);
+			}
+		}
+
+		function addTargetMatch(line, matches, index, end, rawTarget) {
+			if (hasTargetRangeOverlap(matches, index, end)) return;
+
+			const target = normalizeExtractedTarget(rawTarget);
+			if (!target) return;
+
+			matches.push({ index, end, target });
+		}
+
+		function hasTargetRangeOverlap(matches, index, end) {
+			return matches.some(function (match) {
+				return index < match.end && end > match.index;
+			});
+		}
+
+		function normalizeExtractedTarget(value) {
+			const token = trimTargetToken(value);
+			if (!token) return '';
+
+			if (/^(?:https?|wss?|tcp|tls|socks5?):\\/\\//i.test(token)) {
+				try {
+					const url = new URL(token);
+					return formatExtractedHostPort(url.hostname, url.port);
+				} catch {
+					return '';
+				}
+			}
+
+			if (token.startsWith('[')) {
+				const endBracketIndex = token.indexOf(']');
+				if (endBracketIndex === -1) return '';
+
+				const host = token.slice(1, endBracketIndex);
+				const rest = token.slice(endBracketIndex + 1);
+				if (!rest) return formatExtractedHostPort(host, '');
+				if (!rest.startsWith(':')) return '';
+
+				const port = rest.slice(1);
+				return isValidPortValue(port) ? formatExtractedHostPort(host, port) : '';
+			}
+
+			const colonMatches = token.match(/:/g) || [];
+			if (colonMatches.length === 1) {
+				const separatorIndex = token.lastIndexOf(':');
+				const maybePort = token.slice(separatorIndex + 1);
+				if (!isValidPortValue(maybePort)) return '';
+				return formatExtractedHostPort(token.slice(0, separatorIndex), maybePort);
+			}
+
+			return formatExtractedHostPort(token, '');
+		}
+
+		function formatExtractedHostPort(hostValue, portValue) {
+			let host = trimTargetToken(hostValue).replace(/^\\[|\\]$/g, '');
+			if (!host) return '';
+
+			if (isPrivateClientIPv4(host)) return '';
+			if (!isIPv4LikeTarget(host) && !isClientRawIPv6(host) && !isClientDomain(host)) return '';
+
+			const port = isValidPortValue(portValue) ? normalizePortValue(portValue) : '';
+			if (portValue && !port) return '';
+
+			if (isClientRawIPv6(host)) {
+				return '[' + host + ']' + (port ? ':' + port : '');
+			}
+
+			return host + (port ? ':' + port : '');
+		}
+
+		function isIPv4LikeTarget(value) {
+			return /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(String(value || ''));
+		}
+
+		function isPrivateClientIPv4(value) {
+			if (!isClientIPv4(value)) return false;
+
+			const parts = String(value || '').split('.').map(function (part) { return Number(part); });
+			return parts[0] === 10
+				|| parts[0] === 127
+				|| parts[0] === 0
+				|| (parts[0] === 169 && parts[1] === 254)
+				|| (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)
+				|| (parts[0] === 192 && parts[1] === 168);
+		}
+
+		function isClientDomain(value) {
+			const labels = String(value || '').split('.');
+			return labels.length >= 2
+				&& /[A-Za-z]/.test(labels[labels.length - 1])
+				&& labels.every(function (label) {
+					return /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label);
+				});
 		}
 
 		function parseClientTarget(input) {
@@ -2598,7 +2787,8 @@ function generateHTML() {
 
 		function isClientRawIPv6(value) {
 			const text = String(value || '');
-			return text.includes(':') && /^[0-9a-fA-F:]+$/.test(text);
+			const colonMatches = text.match(/:/g) || [];
+			return colonMatches.length >= 2 && /^[0-9a-fA-F:]+$/.test(text);
 		}
 
 		function getDirectIpTarget(input) {
