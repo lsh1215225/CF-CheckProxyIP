@@ -1738,6 +1738,30 @@ function generateHTML() {
 			word-break: break-word;
 		}
 
+		.copy-target {
+			align-self: flex-start;
+			margin: 0;
+			padding: 0;
+			border: 0;
+			background: transparent;
+			color: var(--text);
+			text-align: left;
+			cursor: pointer;
+			transition: color 0.18s ease, text-shadow 0.18s ease;
+		}
+
+		.copy-target:hover,
+		.copy-target:focus-visible {
+			color: #8be9ff;
+			text-shadow: 0 0 18px rgba(97, 219, 255, 0.28);
+		}
+
+		.copy-target:focus-visible {
+			outline: 2px solid rgba(97, 219, 255, 0.48);
+			outline-offset: 4px;
+			border-radius: 6px;
+		}
+
 		.result-detail {
 			color: var(--muted);
 			font-size: 0.94rem;
@@ -3223,6 +3247,11 @@ function generateHTML() {
 			return '<span class="' + className + '">' + getMetaChipIcon(iconName) + '<span>' + escapeHtml(text) + '</span></span>';
 		}
 
+		function buildCopyableTarget(target) {
+			const value = String(target || '');
+			return '<button class="result-ip copy-target" type="button" data-copy-target="' + escapeHtml(value) + '" title="点击复制候选目标" aria-label="复制候选目标 ' + escapeHtml(value) + '">' + escapeHtml(value) + '</button>';
+		}
+
 		function normalizeBatchInputValue(value) {
 			const targets = [];
 			normalizeDelimitedTargetText(value).split('\\n').forEach(function (line) {
@@ -4229,6 +4258,23 @@ function generateHTML() {
 			showExportToast(message, tone);
 		}
 
+		async function handleCopyTargetClick(event) {
+			const button = event.target.closest('[data-copy-target]');
+			if (!button || !resultsDiv.contains(button)) return;
+
+			event.preventDefault();
+			const target = button.dataset.copyTarget || button.innerText.trim();
+			if (!target) return;
+
+			try {
+				await writeTextToClipboard(target);
+				showToast('已复制候选目标：' + target);
+			} catch (error) {
+				console.error('Failed to copy candidate target', error);
+				showToast('复制失败，请检查浏览器权限', 'error');
+			}
+		}
+
 		function normalizeCustomRegionCode(value) {
 			return String(value || '').replace(/[^a-z]/gi, '').slice(0, 2).toUpperCase();
 		}
@@ -4571,7 +4617,7 @@ function generateHTML() {
 				'<div class="result-top">' +
 					'<div class="result-info">' +
 						'<span class="result-label">候选目标</span>' +
-						'<span class="result-ip">' + escapeHtml(ip) + '</span>' +
+						buildCopyableTarget(ip) +
 						'<span class="result-detail">已加入检测队列，正在等待返回结果。</span>' +
 					'</div>' +
 					'<span class="status-badge status-pending">等待中</span>' +
@@ -4635,7 +4681,7 @@ function generateHTML() {
 
 					itemObj.info.innerHTML =
 						'<span class="result-label">候选目标</span>' +
-						'<span class="result-ip">' + escapeHtml(data.candidate || target) + '</span>' +
+						buildCopyableTarget(data.candidate || target) +
 						'<span class="result-detail">代理验证通过，可继续查看出口位置、网络信息和地图分布。</span>';
 
 					const metaParts = [
@@ -4654,7 +4700,7 @@ function generateHTML() {
 					itemObj.badge.innerText = '不可用';
 					itemObj.info.innerHTML =
 						'<span class="result-label">候选目标</span>' +
-						'<span class="result-ip">' + escapeHtml(target) + '</span>' +
+						buildCopyableTarget(target) +
 						'<span class="result-detail">无法通过该代理访问 Cloudflare，请更换目标后重试。</span>';
 					itemObj.meta.innerHTML =
 						buildMetaChip('检测未通过', 'error', 'meta-chip-danger') +
@@ -4670,7 +4716,7 @@ function generateHTML() {
 				itemObj.badge.innerText = '失败';
 				itemObj.info.innerHTML =
 					'<span class="result-label">候选目标</span>' +
-					'<span class="result-ip">' + escapeHtml(target) + '</span>' +
+					buildCopyableTarget(target) +
 					'<span class="result-detail">检测请求执行失败，可能是接口异常或网络中断。</span>';
 				itemObj.meta.innerHTML =
 					buildMetaChip('请求异常', 'error', 'meta-chip-danger') +
@@ -4877,6 +4923,8 @@ function generateHTML() {
 		if (fofaBtn) {
 			fofaBtn.addEventListener('click', openFOFA);
 		}
+
+		resultsDiv.addEventListener('click', handleCopyTargetClick);
 
 		checkBtn.addEventListener('click', async function () {
 			const value = batchMode.checked ? normalizeBatchInputValue(inputList.value) : stripTargetLabel(inputList.value);
