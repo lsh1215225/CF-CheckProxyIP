@@ -1,3 +1,5 @@
+const RESOLVE_BATCH_LIMIT = 20;
+
 export default {
 	async fetch(request) {
 		const url = new URL(request.url);
@@ -25,12 +27,103 @@ export default {
 					}
 				});
 			}
+		} else if (url.pathname === '/resolve-batch') {
+			return handleResolveBatchRequest(request);
 		} else if (url.pathname === '/locations') return fetch(new Request('https://speed.cloudflare.com/locations', { headers: { 'Referer': 'https://speed.cloudflare.com/' } }));
 		return new Response(generateHTML(), {
 			headers: { 'Content-Type': 'text/html; charset=UTF-8' }
 		});
 	}
 };
+
+async function handleResolveBatchRequest(request) {
+	const headers = {
+		'Content-Type': 'application/json',
+		'Access-Control-Allow-Origin': '*',
+		'Access-Control-Allow-Methods': 'POST, OPTIONS',
+		'Access-Control-Allow-Headers': 'Content-Type'
+	};
+
+	if (request.method === 'OPTIONS') {
+		return new Response(null, {
+			status: 204,
+			headers
+		});
+	}
+
+	if (request.method !== 'POST') {
+		return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+			status: 405,
+			headers: {
+				...headers,
+				'Allow': 'POST, OPTIONS'
+			}
+		});
+	}
+
+	let payload;
+	try {
+		payload = await request.json();
+	} catch (error) {
+		return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+			status: 400,
+			headers
+		});
+	}
+
+	const inputs = getResolveBatchInputs(payload);
+	if (!inputs.length) {
+		return new Response(JSON.stringify({ error: 'Missing targets' }), {
+			status: 400,
+			headers
+		});
+	}
+
+	if (inputs.length > RESOLVE_BATCH_LIMIT) {
+		return new Response(JSON.stringify({ error: `Resolve batch limit is ${RESOLVE_BATCH_LIMIT}` }), {
+			status: 400,
+			headers
+		});
+	}
+
+	const results = await Promise.all(inputs.map(async input => {
+		try {
+			return {
+				input,
+				targets: await handleResolve(input)
+			};
+		} catch (error) {
+			return {
+				input,
+				targets: [],
+				error: error.message
+			};
+		}
+	}));
+
+	return new Response(JSON.stringify({ results }), {
+		headers
+	});
+}
+
+function getResolveBatchInputs(payload) {
+	const values = Array.isArray(payload?.targets)
+		? payload.targets
+		: (Array.isArray(payload?.proxyips) ? payload.proxyips : []);
+
+	return uniqueStrings(values
+		.map(value => String(value || '').trim())
+		.filter(Boolean));
+}
+
+function uniqueStrings(values) {
+	const seenValues = new Set();
+	return values.filter(value => {
+		if (seenValues.has(value)) return false;
+		seenValues.add(value);
+		return true;
+	});
+}
 
 async function handleResolve(input) {
 	let { host, port } = parseTarget(input);
@@ -62,7 +155,7 @@ async function handleResolve(input) {
 				}
 			}
 			if (targets.length) {
-				return targets;
+				return uniqueStrings(targets);
 			}
 		}
 	}
@@ -84,7 +177,7 @@ async function handleResolve(input) {
 		throw new Error('Could not resolve domain');
 	}
 
-	return results;
+	return uniqueStrings(results);
 }
 
 function parseTarget(input) {
@@ -2803,6 +2896,9 @@ function generateHTML() {
 		let inputCount = 0;
 		let appState = 'idle';
 		const CHECK_CONCURRENCY = 32;
+		const RESOLVE_BATCH_SIZE = 20;
+		const RESOLVE_BATCH_TIMEOUT_MS = 3000;
+		const RESOLVE_BATCH_MAX_ATTEMPTS = 3;
 		const PRIMARY_RESULT_FILTERS = [
 			{ key: 'all', label: '全部' },
 			{ key: 'success', label: '有效' },
@@ -3137,6 +3233,10 @@ function generateHTML() {
 			return targets.join('\\n');
 		}
 
+		function normalizeBatchEditingValue(value) {
+			return normalizeDelimitedTargetText(value);
+		}
+
 		function stripTargetLabel(value) {
 			const normalized = normalizeDelimitedTargetText(value);
 			const firstLine = normalized.split('\\n')[0] || '';
@@ -3395,11 +3495,169 @@ function generateHTML() {
 		}
 
 		function pushResolvedTargets(targetGroups, output) {
+			const seenTargets = new Set();
 			targetGroups.forEach(function (group) {
 				group.forEach(function (target) {
+					if (seenTargets.has(target)) return;
+					seenTargets.add(target);
 					output.push(target);
 				});
 			});
+		}
+
+		function uniqueTargets(targets) {
+			const seenTargets = new Set();
+			return targets.filter(function (target) {
+				if (seenTargets.has(target)) return false;
+				seenTargets.add(target);
+				return true;
+			});
+		}
+
+		function splitIntoChunks(items, size) {
+			const chunks = [];
+			for (let i = 0; i < items.length; i += size) {
+				chunks.push(items.slice(i, i + size));
+			}
+			return chunks;
+		}
+
+		async function fetchJsonWithTimeout(resource, options, timeoutMs) {
+			const controller = new AbortController();
+			const timer = window.setTimeout(function () {
+				controller.abort();
+			}, timeoutMs);
+
+			try {
+				const response = await fetch(resource, Object.assign({}, options || {}, {
+					signal: controller.signal
+				}));
+				let payload = null;
+				try {
+					payload = await response.json();
+				} catch (error) {
+					if (response.ok) {
+						throw error;
+					}
+				}
+				return { response, payload };
+			} finally {
+				window.clearTimeout(timer);
+			}
+		}
+
+		function updateResolveBatchProgress(batchIndex, totalBatches, attempt) {
+			const retryText = attempt > 1
+				? '，第 ' + attempt + ' 次尝试'
+				: '';
+			progressText.innerText = '正在解析目标... 第 ' + batchIndex + ' / ' + totalBatches + ' 批' + retryText;
+		}
+
+		function applyResolveBatchPayload(batch, payload) {
+			const results = payload && Array.isArray(payload.results) ? payload.results : null;
+			if (!results) {
+				throw new Error('Invalid resolve batch response');
+			}
+
+			results.forEach(function (result, index) {
+				const job = batch[index];
+				if (!job) return;
+
+				if (result && Array.isArray(result.targets)) {
+					job.group.push(...result.targets);
+				}
+
+				if (result && result.error) {
+					console.warn('Resolve skipped for', job.line, result.error);
+				}
+			});
+		}
+
+		async function requestResolveBatch(batch) {
+			const payload = {
+				targets: batch.map(function (job) { return job.line; })
+			};
+			const result = await fetchJsonWithTimeout('/resolve-batch', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(payload)
+			}, RESOLVE_BATCH_TIMEOUT_MS);
+
+			if (!result.response.ok) {
+				const errorMessage = result.payload && result.payload.error
+					? result.payload.error
+					: 'Resolve batch failed with status ' + result.response.status;
+				throw new Error(errorMessage);
+			}
+
+			applyResolveBatchPayload(batch, result.payload);
+		}
+
+		async function resolveBatchWithRetry(batch, batchIndex, totalBatches) {
+			for (let attempt = 1; attempt <= RESOLVE_BATCH_MAX_ATTEMPTS; attempt++) {
+				updateResolveBatchProgress(batchIndex, totalBatches, attempt);
+
+				try {
+					await requestResolveBatch(batch);
+					return true;
+				} catch (error) {
+					const label = error && error.name === 'AbortError'
+						? 'Resolve batch timeout'
+						: 'Resolve batch error';
+
+					if (attempt >= RESOLVE_BATCH_MAX_ATTEMPTS) {
+						console.error(label + ', abandoned batch', batch.map(function (job) { return job.line; }), error);
+						return false;
+					}
+
+					console.warn(label + ', retrying batch', batch.map(function (job) { return job.line; }), error);
+				}
+			}
+
+			return false;
+		}
+
+		async function resolveBatchJobs(resolveJobs) {
+			const batches = splitIntoChunks(resolveJobs, RESOLVE_BATCH_SIZE);
+			let failedBatchCount = 0;
+
+			for (let index = 0; index < batches.length; index++) {
+				const resolved = await resolveBatchWithRetry(batches[index], index + 1, batches.length);
+				if (!resolved) {
+					failedBatchCount++;
+				}
+			}
+
+			if (failedBatchCount > 0) {
+				console.warn('Resolve batches abandoned:', failedBatchCount);
+			}
+		}
+
+		async function resolveSingleJob(job) {
+			for (let attempt = 1; attempt <= RESOLVE_BATCH_MAX_ATTEMPTS; attempt++) {
+				try {
+					const result = await fetchJsonWithTimeout('/resolve?proxyip=' + encodeURIComponent(job.line), {}, RESOLVE_BATCH_TIMEOUT_MS);
+					if (!result.response.ok) {
+						console.error('Resolve error for', job.line, result.payload || result.response.status);
+						return false;
+					}
+
+					if (Array.isArray(result.payload)) {
+						job.group.push(...result.payload);
+					}
+					return true;
+				} catch (error) {
+					if (attempt >= RESOLVE_BATCH_MAX_ATTEMPTS) {
+						console.error('Resolve timeout for', job.line, error);
+						return false;
+					}
+					console.warn('Resolve timeout for ' + job.line + ', retrying', error);
+				}
+			}
+
+			return false;
 		}
 
 		async function runWithConcurrency(items, limit, worker) {
@@ -3425,14 +3683,14 @@ function generateHTML() {
 			if (!control || control.tagName !== 'TEXTAREA') return;
 
 			const rawValue = control.value;
-			const nextValue = normalizeBatchInputValue(rawValue);
+			const nextValue = normalizeBatchEditingValue(rawValue);
 
 			if (nextValue === rawValue) return;
 
 			const selectionStart = control.selectionStart ?? rawValue.length;
 			const selectionEnd = control.selectionEnd ?? rawValue.length;
-			const nextSelectionStart = normalizeBatchInputValue(rawValue.slice(0, selectionStart)).length;
-			const nextSelectionEnd = normalizeBatchInputValue(rawValue.slice(0, selectionEnd)).length;
+			const nextSelectionStart = normalizeBatchEditingValue(rawValue.slice(0, selectionStart)).length;
+			const nextSelectionEnd = normalizeBatchEditingValue(rawValue.slice(0, selectionEnd)).length;
 
 			control.value = nextValue;
 			control.setSelectionRange(nextSelectionStart, nextSelectionEnd);
@@ -4625,7 +4883,7 @@ function generateHTML() {
 			if (!value) return;
 
 			const lines = batchMode.checked
-				? normalizeBatchInputValue(value).split('\\n').map(function (line) { return line.trim(); }).filter(Boolean)
+				? uniqueTargets(normalizeBatchInputValue(value).split('\\n').map(function (line) { return line.trim(); }).filter(Boolean))
 				: [value];
 
 			inputList.value = batchMode.checked ? lines.join('\\n') : value;
@@ -4661,15 +4919,11 @@ function generateHTML() {
 					return group;
 				});
 
-				for (const job of resolveJobs) {
-					try {
-						const response = await fetch('/resolve?proxyip=' + encodeURIComponent(job.line));
-						const targets = await response.json();
-						if (Array.isArray(targets)) {
-							job.group.push(...targets);
-						}
-					} catch (error) {
-						console.error('Resolve error for', job.line, error);
+				if (batchMode.checked) {
+					await resolveBatchJobs(resolveJobs);
+				} else {
+					for (const job of resolveJobs) {
+						await resolveSingleJob(job);
 					}
 				}
 

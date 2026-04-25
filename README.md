@@ -35,7 +35,8 @@
 
 - 支持单条输入
 - 支持多行批量输入
-- 批量模式下会在前端跳过直接 IP 解析，只解析域名，再以 64 并发发起检测
+- 批量模式下会在前端跳过直接 IP 解析，对整理后的输入先去重，只解析域名，并按每批最多 20 个域名提交解析
+- 所有候选目标汇总后会以 32 并发发起检测
 
 ### 2. 多种目标格式
 
@@ -81,7 +82,7 @@
 ```text
 浏览器
   ├─ 访问 Worker 首页 /
-  ├─ 调用 /resolve 解析输入目标
+  ├─ 调用 /resolve 或 /resolve-batch 解析输入目标
   ├─ 调用 /locations 获取 Cloudflare 机房位置
   └─ 直接请求外部检测接口 https://api.090227.xyz/check
 
@@ -164,6 +165,41 @@ Cloudflare Worker
 }
 ```
 
+### `POST /resolve-batch`
+
+批量解析域名使用的接口。单次最多提交 20 个目标，避免 Cloudflare Workers 免费套餐的子请求数量上限。
+
+#### 请求示例
+
+```json
+{
+  "targets": [
+    "proxyip.example.com",
+    "proxyip.example.net:8443"
+  ]
+}
+```
+
+#### 返回示例
+
+```json
+{
+  "results": [
+    {
+      "input": "proxyip.example.com",
+      "targets": [
+        "203.0.113.10:443"
+      ]
+    },
+    {
+      "input": "proxyip.example.net:8443",
+      "targets": [],
+      "error": "Could not resolve domain"
+    }
+  ]
+}
+```
+
 ### `GET /locations`
 
 转发 Cloudflare 官方位置数据：
@@ -216,8 +252,12 @@ https://your-worker.example.workers.dev/8.223.63.150:443
 批量模式下：
 
 - 英文逗号和中文逗号都会自动转成换行
-- IPv4 / IPv6 会先在浏览器本地识别和归一化，不会提交给 `/resolve`
-- 只有域名目标会调用 `/resolve`
+- 手动换行和空行会在编辑时保留，点击检测时再进行完整整理
+- IPv4 / IPv6 会先在浏览器本地识别和归一化，不会提交给解析接口
+- 整理后的输入目标会先按原始顺序去重
+- 只有域名目标会调用 `/resolve-batch`
+- 域名会按每批最多 20 个提交；单批 3 秒未响应会重试，连续 3 次失败后放弃该批
+- 解析返回后的最终候选目标会再按 `IP:port` 去重
 - 所有候选目标汇总后会以 32 并发发起检测
 
 ### 地图详情
