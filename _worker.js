@@ -1,7 +1,34 @@
-const RESOLVE_BATCH_LIMIT = 20;
+const DEFAULT_BEIAN_CONTENT = `© 2025 - 2026 Check Socks5 · 基于 <a href="https://github.com/cmliu/CF-Workers-CheckProxyIP" target="_blank" rel="noreferrer">Cloudflare Workers 构建与运行</a> · 今日访问人数：<span id="visit-count">···</span> · 站点维护：<a href="https://t.me/CMLiussss" target="_blank" rel="noreferrer">CMLiussss</a>
+<script>
+(function () {
+	const visitCountElement = document.getElementById('visit-count');
+	if (!visitCountElement) return;
 
+	const hostname = String(window.location.hostname || window.location.host || '').trim().toLowerCase();
+	const statsId = hostname || 'unknown-host';
+
+	fetch('https://tongji.090227.xyz/?id=' + encodeURIComponent(statsId))
+		.then(function (response) {
+			if (!response.ok) throw new Error('Failed to load visit count: ' + response.status);
+			return response.json();
+		})
+		.then(function (data) {
+			if (data && data.visitCount !== undefined) {
+				visitCountElement.textContent = data.visitCount;
+				return;
+			}
+			throw new Error('visitCount is missing in response');
+		})
+		.catch(function (error) {
+			console.error('Failed to fetch visit count', error);
+			visitCountElement.textContent = '加载失败';
+		});
+})();
+</script>`;
+const RESOLVE_BATCH_LIMIT = 20;
 export default {
-	async fetch(request) {
+	async fetch(request, env) {
+		const 备案内容 = env.BEIAN ?? DEFAULT_BEIAN_CONTENT; 
 		const url = new URL(request.url);
 
 		if (url.pathname === '/resolve') {
@@ -30,7 +57,7 @@ export default {
 		} else if (url.pathname === '/resolve-batch') {
 			return handleResolveBatchRequest(request);
 		} else if (url.pathname === '/locations') return fetch(new Request('https://speed.cloudflare.com/locations', { headers: { 'Referer': 'https://speed.cloudflare.com/' } }));
-		return new Response(generateHTML(), {
+		return new Response(generateHTML(备案内容), {
 			headers: { 'Content-Type': 'text/html; charset=UTF-8' }
 		});
 	}
@@ -265,7 +292,7 @@ async function dohQuery(name, type, endpoint = 'https://cloudflare-dns.com/dns-q
 	}
 }
 
-function generateHTML() {
+function generateHTML(备案内容) {
 	return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -2877,7 +2904,7 @@ function generateHTML() {
 		</main>
 
 		<footer class="site-footer">
-			<div>© 2025 - 2026 Check ProxyIP · 基于 Cloudflare Workers 构建与运行 · 今日访问人数：<span id="visit-count">···</span> · 站点维护：<a href="https://t.me/CMLiussss" target="_blank" rel="noreferrer">CMLiussss</a></div>
+			<div>${备案内容}</div>
 		</footer>
 	</div>
 
@@ -3029,34 +3056,6 @@ function generateHTML() {
 		}
 
 		initializeTheme();
-
-		function getVisitStatsId() {
-			const hostname = String(window.location.hostname || window.location.host || '').trim().toLowerCase();
-			return hostname || 'unknown-host';
-		}
-
-		async function fetchVisitCount() {
-			const visitCountElement = document.getElementById('visit-count');
-			if (!visitCountElement) return;
-
-			try {
-				const response = await fetch('https://tongji.090227.xyz/?id=' + encodeURIComponent(getVisitStatsId()));
-				if (!response.ok) {
-					throw new Error('Failed to load visit count: ' + response.status);
-				}
-
-				const data = await response.json();
-				if (data && data.visitCount !== undefined) {
-					visitCountElement.textContent = data.visitCount;
-					return;
-				}
-
-				throw new Error('visitCount is missing in response');
-			} catch (error) {
-				console.error('Failed to fetch visit count', error);
-				visitCountElement.textContent = '加载失败';
-			}
-		}
 
 		function initMap() {
 			if (map) return;
@@ -5176,7 +5175,6 @@ function generateHTML() {
 			updateResultFilters();
 			updateCustomRegionField();
 			loadCfLocations();
-			fetchVisitCount();
 
 			const path = window.location.pathname.slice(1);
 			if (path && path.length > 3) {
