@@ -1050,8 +1050,103 @@ function generateHTML(备案内容) {
 		}
 
 		.side-card {
-			padding: 26px;
+			padding: 30px;
 			min-height: 100%;
+		}
+
+		.summary-card {
+			position: relative;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.summary-card > * {
+			position: relative;
+			z-index: 1;
+		}
+
+		.summary-top {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			gap: 18px;
+		}
+
+		.summary-copy {
+			flex: 1 1 auto;
+			min-width: 0;
+		}
+
+		.summary-backend {
+			display: flex;
+			justify-content: flex-end;
+			flex: 0 0 auto;
+			max-width: 240px;
+		}
+
+		.summary-backend-badge {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 10px 14px;
+			font-size: 0.75rem;
+			font-weight: 700;
+			line-height: 1.45;
+			backdrop-filter: blur(14px);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+			white-space: normal;
+			text-align: left;
+		}
+
+		.summary-backend-badge::before {
+			content: '';
+			width: 8px;
+			height: 8px;
+			border-radius: 999px;
+			flex: 0 0 auto;
+			background: currentColor;
+			opacity: 0.9;
+		}
+
+		.summary-backend-badge.state-loading {
+			background: rgba(97, 219, 255, 0.08);
+			border-color: rgba(97, 219, 255, 0.18);
+			color: #9feaff;
+		}
+
+		.summary-backend-badge.state-ready {
+			background: rgba(16, 185, 129, 0.14);
+			border-color: rgba(52, 211, 153, 0.28);
+			color: #b7f7d0;
+		}
+
+		.summary-backend-badge.state-error {
+			background: rgba(239, 68, 68, 0.12);
+			border-color: rgba(248, 113, 113, 0.22);
+			color: #fecaca;
+		}
+
+		.summary-flag-overlay {
+			position: absolute;
+			top: 68px;
+			right: -18px;
+			width: 156px;
+			height: 104px;
+			border-radius: 28px;
+			background-position: center;
+			background-repeat: no-repeat;
+			background-size: cover;
+			opacity: 0;
+			filter: blur(13px) saturate(1.08);
+			transform: rotate(7deg) scale(1.18);
+			transform-origin: top right;
+			pointer-events: none;
+			z-index: 0;
+			transition: opacity 0.24s ease;
+		}
+
+		.summary-card.has-backend-flag .summary-flag-overlay {
+			opacity: 0.18;
 		}
 
 		.summary-description {
@@ -2103,6 +2198,18 @@ function generateHTML(备案内容) {
 			color: #0f5f8e;
 		}
 
+		html[data-theme='light'] .summary-backend-badge.state-ready {
+			background: rgba(16, 185, 129, 0.12);
+			border-color: rgba(5, 150, 105, 0.22);
+			color: #0f766e;
+		}
+
+		html[data-theme='light'] .summary-backend-badge.state-error {
+			background: rgba(239, 68, 68, 0.1);
+			border-color: rgba(220, 38, 38, 0.18);
+			color: #b91c1c;
+		}
+
 		html[data-theme='light'] .field-label {
 			color: #17324a;
 		}
@@ -2559,6 +2666,23 @@ function generateHTML(备案内容) {
 				align-items: flex-start;
 			}
 
+			.summary-top {
+				flex-direction: column;
+				align-items: stretch;
+			}
+
+			.summary-backend {
+				flex-direction: column;
+				align-items: stretch;
+				max-width: none;
+				width: 100%;
+			}
+
+			.summary-backend-badge {
+				width: 100%;
+				justify-content: flex-start;
+			}
+
 			.guide-flow {
 				grid-template-columns: 1fr;
 				padding: 20px;
@@ -2694,10 +2818,18 @@ function generateHTML(备案内容) {
 				</div>
 
 				<aside class="side-column">
-					<div class="surface-card side-card">
-						<p class="section-kicker">Summary</p>
-						<h3 class="summary-title" id="summaryHeadline">等待输入</h3>
-						<p class="summary-description" id="summaryDescription">实时统计和检测概览。</p>
+					<div class="surface-card side-card summary-card" id="summaryCard">
+						<div class="summary-flag-overlay" id="summaryFlagOverlay" aria-hidden="true"></div>
+						<div class="summary-top">
+							<div class="summary-copy">
+								<p class="section-kicker">Summary</p>
+								<h3 class="summary-title" id="summaryHeadline">等待输入</h3>
+								<p class="summary-description" id="summaryDescription">实时统计和检测概览。</p>
+							</div>
+							<div class="summary-backend">
+								<span class="panel-badge summary-backend-badge state-loading" id="summaryBackendBadge">验证服务定位中...</span>
+							</div>
+						</div>
 						<div id="progressContainer" class="progress-container">
 							<div class="progress-head">
 								<span>检测进度</span>
@@ -2926,8 +3058,11 @@ function generateHTML(备案内容) {
 		const historyDropdown = document.getElementById('historyDropdown');
 		const fieldHint = document.getElementById('fieldHint');
 		const modeLabel = document.getElementById('modeLabel');
+		const summaryCard = document.getElementById('summaryCard');
+		const summaryFlagOverlay = document.getElementById('summaryFlagOverlay');
 		const summaryHeadline = document.getElementById('summaryHeadline');
 		const summaryDescription = document.getElementById('summaryDescription');
+		const summaryBackendBadge = document.getElementById('summaryBackendBadge');
 		const statTotal = document.getElementById('statTotal');
 		const statSuccess = document.getElementById('statSuccess');
 		const statPending = document.getElementById('statPending');
@@ -2964,6 +3099,7 @@ function generateHTML(备案内容) {
 		let mapSvgRenderer = null;
 		let cfLocationIndex = new Map();
 		let cfLocationsPromise = null;
+		let backendServicePromise = null;
 		let mapRenderToken = 0;
 		let totalTargets = 0;
 		let completedCount = 0;
@@ -3159,6 +3295,79 @@ function generateHTML(备案内容) {
 				region: location.region,
 				country: location.country
 			} : null;
+		}
+
+		function setSummaryBackendStatus(text, state, titleText) {
+			if (!summaryBackendBadge) return;
+			summaryBackendBadge.innerText = text;
+			summaryBackendBadge.className = 'panel-badge summary-backend-badge state-' + (state || 'loading');
+			if (titleText) {
+				summaryBackendBadge.title = titleText;
+			} else {
+				summaryBackendBadge.removeAttribute('title');
+			}
+		}
+
+		function updateSummaryBackendFlag(flagUrl) {
+			if (!summaryCard || !summaryFlagOverlay) return;
+
+			if (flagUrl) {
+				summaryCard.classList.add('has-backend-flag');
+				summaryFlagOverlay.style.backgroundImage = 'url("' + flagUrl + '")';
+				return;
+			}
+
+			summaryCard.classList.remove('has-backend-flag');
+			summaryFlagOverlay.style.backgroundImage = '';
+		}
+
+		async function loadBackendServiceInfo() {
+			if (backendServicePromise) {
+				return backendServicePromise;
+			}
+
+			setSummaryBackendStatus('验证服务定位中...', 'loading');
+
+			backendServicePromise = Promise.all([
+				loadCfLocations(),
+				fetchTextWithTimeout('https://api.090227.xyz/cdn-cgi/trace', { cache: 'no-store' }, 8000)
+			]).then(function (results) {
+				const traceResult = results[1];
+				const payload = parseTracePayload(traceResult?.payload);
+
+				if (!traceResult?.response?.ok) {
+					throw new Error('Failed to load backend trace: ' + traceResult?.response?.status);
+				}
+
+				const coloCode = normalizeColoCode(payload?.colo);
+				const cfLocation = getCfLocation(coloCode);
+				const countryCode = String(cfLocation?.country || '').trim().toUpperCase();
+				const city = String(cfLocation?.city || '').trim();
+				const locationLabel = [countryCode, city].filter(Boolean).join(' · ');
+				const titleText = '当前实际由 Cloudflare '
+					+ (coloCode || '未知')
+					+ ' 机房'
+					+ (locationLabel ? '（' + locationLabel + '）' : '')
+					+ ' 的验证后端发起连通性测试。若被测试对象距离该测试后端过远，可能因网络延迟过高或连接超时而误报为不可用，这并不一定代表该目标在你的实际使用环境中同样不可用。';
+
+				setSummaryBackendStatus(countryCode + ' · ' + coloCode + ' 服务已就绪', 'ready', titleText);
+				updateSummaryBackendFlag(getFlagUrlFromCountryCode(countryCode));
+
+				return {
+					colo: coloCode,
+					countryCode: countryCode,
+					city: city,
+					host: String(payload?.h || '').trim(),
+					ip: String(payload?.ip || '').trim()
+				};
+			}).catch(function (error) {
+				console.error('Failed to load backend service info', error);
+				setSummaryBackendStatus('验证服务定位失败', 'error', error?.message || '');
+				updateSummaryBackendFlag('');
+				return null;
+			});
+
+			return backendServicePromise;
 		}
 
 		function clearMapLayers() {
@@ -3636,6 +3845,51 @@ function generateHTML(备案内容) {
 				window.clearTimeout(timer);
 				if (signal) signal.removeEventListener('abort', abortFromSignal);
 			}
+		}
+
+		async function fetchTextWithTimeout(resource, options, timeoutMs, signal) {
+			const controller = new AbortController();
+			const timer = window.setTimeout(function () {
+				controller.abort();
+			}, timeoutMs);
+			const abortFromSignal = function () {
+				controller.abort();
+			};
+			if (signal) {
+				if (signal.aborted) controller.abort();
+				else signal.addEventListener('abort', abortFromSignal, { once: true });
+			}
+
+			try {
+				const response = await fetch(resource, Object.assign({}, options || {}, {
+					signal: controller.signal
+				}));
+				const payload = await response.text();
+				return { response, payload };
+			} finally {
+				window.clearTimeout(timer);
+				if (signal) signal.removeEventListener('abort', abortFromSignal);
+			}
+		}
+
+		function parseTracePayload(text) {
+			const payload = {};
+			const lines = String(text || '').replace(/\\r/g, '').split('\\n');
+
+			lines.forEach(function (line) {
+				const separatorIndex = line.indexOf('=');
+				if (separatorIndex <= 0) {
+					return;
+				}
+
+				const key = line.slice(0, separatorIndex).trim();
+				const value = line.slice(separatorIndex + 1).trim();
+				if (key) {
+					payload[key] = value;
+				}
+			});
+
+			return payload;
 		}
 
 		function updateResolveBatchProgress(batchIndex, totalBatches, attempt) {
@@ -4649,11 +4903,18 @@ function generateHTML(备案内容) {
 			return '';
 		}
 
+		function getFlagUrlFromCountryCode(countryCode) {
+			const normalized = String(countryCode || '').trim().toLowerCase();
+			return /^[a-z]{2}$/.test(normalized)
+				? 'https://ipdata.co/flags/' + normalized + '.png'
+				: '';
+		}
+
 		function getFlagUrlFromExitIps(exitIps) {
 			for (const entry of exitIps) {
 				const countryCode = getExitCountryCode(entry.exitData);
 				if (countryCode) {
-					return 'https://ipdata.co/flags/' + countryCode + '.png';
+					return getFlagUrlFromCountryCode(countryCode);
 				}
 			}
 
@@ -5175,6 +5436,7 @@ function generateHTML(备案内容) {
 			updateResultFilters();
 			updateCustomRegionField();
 			loadCfLocations();
+			loadBackendServiceInfo();
 
 			const path = window.location.pathname.slice(1);
 			if (path && path.length > 3) {
