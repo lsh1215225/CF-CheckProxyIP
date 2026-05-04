@@ -407,9 +407,9 @@ https://cloudflare-dns.com/dns-query
 - 当前仓库没有使用 `TOKEN`、`URL302`、`URL`、`ICO` 等环境变量
 - 当前部署重点是“检测前端页面 + 目标解析”，不是“全功能后端检测 API”
 
-## Acknowledgements
+## 开源代码引用
 
-部分开源代码思路与实现参考自 [@Alexandre_Kojeve](https://t.me/Enkelte_notif/822)。
+部分开源代码思路与实现参考自 [ToiCF/CF-Workers-CheckProxyIP](https://github.com/ToiCF/CF-Workers-CheckProxyIP)
 
 ## License
 
