@@ -25,7 +25,7 @@ const DEFAULT_BEIAN_CONTENT = `© 2025 - 2026 Check Socks5 · 基于 <a href="ht
 		});
 })();
 </script>`;
-const RESOLVE_BATCH_LIMIT = 20;
+const RESOLVE_BATCH_LIMIT = 15;
 export default {
 	async fetch(request, env) {
 		const 备案内容 = env.BEIAN ?? DEFAULT_BEIAN_CONTENT; 
@@ -170,29 +170,20 @@ async function handleResolve(input) {
 		return [`${finalHost}:${port}`];
 	}
 
-	if (host.toLowerCase().includes('.william.')) {
-		const txtRecords = await dohQuery(host, 'TXT');
-		if (txtRecords.length) {
-			const targets = [];
-			for (const record of txtRecords) {
-				const value = normalizeTxtValue(record.data);
-				for (const part of value.split(',')) {
-					const candidate = part.trim();
-					if (candidate) targets.push(candidate);
-				}
-			}
-			if (targets.length) {
-				return uniqueStrings(targets);
-			}
-		}
-	}
-
-	const [aRecords, aaaaRecords] = await Promise.all([
+	const [txtRecords, aRecords, aaaaRecords] = await Promise.all([
+		dohQuery(host, 'TXT'),
 		dohQuery(host, 'A'),
 		dohQuery(host, 'AAAA')
 	]);
 
 	const results = [];
+	for (const record of txtRecords.filter(item => item.type === 16 && item.data)) {
+		const value = normalizeTxtValue(record.data);
+		for (const part of value.split(',')) {
+			const candidate = part.trim();
+			if (candidate) results.push(candidate);
+		}
+	}
 	for (const record of aRecords.filter(item => item.type === 1 && item.data)) {
 		results.push(`${record.data}:${port}`);
 	}
@@ -3108,7 +3099,7 @@ function generateHTML(备案内容) {
 		let appState = 'idle';
 		let activeRun = null;
 		const CHECK_CONCURRENCY = 32;
-		const RESOLVE_BATCH_SIZE = 20;
+		const RESOLVE_BATCH_SIZE = 15;
 		const RESOLVE_BATCH_TIMEOUT_MS = 3000;
 		const RESOLVE_BATCH_MAX_ATTEMPTS = 3;
 		const PRIMARY_RESULT_FILTERS = [
@@ -5405,7 +5396,7 @@ function generateHTML(备案内容) {
 					setAppState('done');
 				} else {
 					progressText.innerText = '未解析到目标';
-					showEmptyState('没有可检测的候选目标', '请检查输入格式，或确认域名是否存在 A / AAAA 记录。');
+					showEmptyState('没有可检测的候选目标', '请检查输入格式，或确认域名是否存在 TXT / A / AAAA 记录。');
 					setAppState('empty');
 				}
 			} catch (error) {
