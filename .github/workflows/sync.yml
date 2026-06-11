@@ -1,0 +1,48 @@
+name: Sync
+
+on:
+  schedule:
+    - cron: '15 16 */10 * *'  
+  workflow_dispatch:       # 支持手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出main分支
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: 配置Git用户
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: 添加上游仓库
+        run: git remote add upstream https://github.com/cmliu/CF-Workers-CheckProxyIP.git
+
+      - name: 拉取上游代码
+        run: git fetch upstream main
+
+      - name: 备份本地配置文件
+        run: cp .github/workflows/sync.yml .sync.yml.bak
+
+
+      - name: 强制重置到上游分支
+        run: git reset --hard upstream/main
+
+      - name: 还原配置文件
+        run: |
+          mkdir -p .github/workflows
+          mv .sync.yml.bak .github/workflows/sync.yml
+
+      - name: 提交配置变更
+        run: |
+          git add .github/workflows/sync.yml
+          git commit -m "🔄 $(TZ='Asia/Shanghai' date +'%m-%d %H:%M') 保留本地sync.yml配置" || exit 0   # 忽略无变更提交错误
+
+
+      - name: 强制推送更新
+        run: git push origin main --force
